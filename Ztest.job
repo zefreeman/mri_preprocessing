@@ -1,0 +1,48 @@
+#!/bin/bash 
+
+#  Author: Z Freeman
+#    Date: February, 2023
+# Purpose: Run MRIQC on one subject. 
+
+#SBATCH --job-name=MRIQC_test       	# job name
+#SBATCH --mail-user=$USER@kcl.ac.uk     # send updates to those who submitted the job
+#SBATCH --mail-type=FAIL           		# get email updates about the job failing
+#SBATCH --cpus-per-task=8				# cpus requested
+#SBATCH --mem-per-cpu=2G            	# request 2gb per slot   
+
+# set shell to exit when a command returns an error (e)
+# or when a variable is undefined (u) and print all Z: EXCLUDING FOR TEST PURPOSES
+# commands in stderr (x)
+ set -eux
+
+# generic module loading as suggested by 
+# https://mri.nan.kcl.ac.uk/mediawiki/index.php/SLURM:Job_Design to clean environment
+source /software/system/modules/latest/init/bash
+module use /software/system/modules/NaN/generic
+module purge
+module load nan
+
+# load existing mriqc module
+module load mriqc 
+
+export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=8  # controls multi-threading
+export OMP_NUM_THREADS=8 # controls multi-threading for non-ITK related tasks
+
+$sub_list=$1 # first input argument is the subject list
+$DATA_DIR=$2 # second input argument is the data directory
+$SCRIPTS_DIR=$3 # third input argument is the script directory
+
+# get the subject ID by indexing the subject list with the array task ID
+# Z: still confused by this line!
+sub_id=$( awk "FNR==$SLURM_ARRAY_TASK_ID" $sub_list ) 
+
+# Z: run the mriqc command
+mriqc $DATA_DIR/ $DATA_DIR/derivatives/mriqc --participant-label $sub_id \
+-w $DATA_DIR/derivatives/mriqc/work \ 
+--mem 15 --nprocs $ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS \
+--omp-nthreads $OMP_NUM_THREADS \
+-vv --verbose-reports -m bold 
+
+
+
+
