@@ -1,0 +1,34 @@
+**Z.C.L. Freeman
+freemanzcl@gmail.com
+20230210**
+
+
+BIDS is a consensus way of formatting neuroimaging and behavioural data.
+
+For an overview: https://www.nature.com/articles/sdata201644
+For detailed explanations: https://bids-specification.readthedocs.io/en/latest/introduction.html
+For formatting into BIDS: https://unfmontreal.github.io/Dcm2Bids/
+For validating BIDS formatting: https://github.com/bids-standard/bids-validator
+For examples of BIDS formatted datasets: https://openneuro.org , https://github.com/bids-standard/bids-examples/blob/master/ds002/dataset_description.json
+
+In this instance, using dcm2bids, the process involves taking the DICOM files into the BIDS structure and style. It does not do anything to the events (task) files, which you will have to create and name appropriately yourself for the BIDS formatting to be complete and fMRIPrep to run (I think? it might take an incomplete BIDS because it doesn't actually do anything with the events files, but I think it might use it for the output after preprocessing).
+
+0.5. Prepare by opening python virtual environment (. .virtualenv/bin/activate) then testing if dcm2bids is installed. If not, run: pip install dcm2bids
+1. Make a scaffolded folder structure for the parent folder that each participant will live inside by running *dcm2bids_scaffold* inside your BIDS directory
+2. Move the DICOMs of the participants you want to BIDS into the /sourcedata inside the scaffolded file in their respective folders
+		*(.virtualenv) z@ZMB STAR % foldertest=STARP010380
+		(.virtualenv) z@ZMB STAR % echo $foldertest
+		STARP010380
+		(.virtualenv) z@ZMB STAR % for i in ${foldertest[@]}; do
+			cp -R ~/Documents/STAR/scans_L/${i}/T1/DICOM ~/Documents/STAR/scans_complete/sourcedata
+			mv ~/Documents/STAR/scans_complete/sourcedata/DICOM ~/Documents/STAR/scans_complete/sourcedata/DICOM_${i}_T1
+			done*
+3. Run *dcm2bids_helper -d sourcedata/one_participant_folder* to convert all the DICOMs inside into nii.gz and .json sidecards. The information from these sidecar files is needed to create the config file that dcm2bids uses to convert the DICOMs that you want to convert, as well as name them correctly. 
+		This will create a tmp_dcm2bids folder inside the full scaffolded directory rather than inside the sourcedata subdirectory.
+		Then, pick the data you want to BIDSify by combing through the sidecar files until you find each of the TRM/ABM/T2 etc. that you'll want.
+			nb: not sure if we have fieldmaps collected? can't find anything identifiable as such
+4. Make the config file https://unfmontreal.github.io/Dcm2Bids/docs/how-to/create-config-file/
+6. Run *dcm2bids -d sourcedata/one_participant_folder/ -p sub-ID01 -s ses-2 -c config.json* on one folder at a time (or make a for loop idk)
+		This will make a temporary folder (if one does not yet exist from running dcm2bids_helper), converts the DICOMs into .nii.gz and .json files, then moves the ones indicated in the config file into a new folder with the subject's ID.  
+7. Make the participants file for information about the whole dataset
+8. Check the folders (or just one?) against a BIDS validator 
