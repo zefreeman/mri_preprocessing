@@ -1,0 +1,24 @@
+This series of scripts takes the data outputted directly from the scanner and reshapes into a format appropriate for BIDS conversion. 
+
+Data checking must happen first, following these rules:
+	a) Make sure nothing's missing from the full expected dataset 
+	b) Check for which files are present and check against the log for what happened during the scan to see if they match or if any are 
+     missing from the upload, make a note if missing 
+	c) Check for file duplicates (look at every image and output in order to check this)
+		i) take the later scan if there are two of a particular run 
+		ii) take the longer one if they're longer
+		iii) check against the task files to see if participants just weren't responding or if there's some other obvious reason like the 
+         wrong playlist was used for a particular run
+
+These checks are recorded in a master inventory sheet of all scans on the SLaM sharepoint, where there is records of each participant who 
+took part and notes on how their scans went. Once the data has been checked, files chosen from duplicates if there are any doubles (or 
+triples), then file reshaping can take place. 
+
+The main aims of the reshape folder scripts are then:
+- To rename all files into a consistent format
+- To move all files into appropriate folders by type of data (i.e. scan image, behavioural output, physiology recordings)
+- To make behavioural output from button pressing more readable, and more easily inputted to SPM at the analysis stage
+
+Once data is in appropriate folders, BIDS conversion can be undertaken. This requires a configuriation file that explains the content of 
+each scan which will be converted. At this stage, zipped nifti files are generated. Without a config file, fmriprep will not run. No 
+behavioural data is needed at this stage, but participant information must also be input to a bare-bones level in a BIDS required file.
