@@ -17,7 +17,7 @@ library(dplyr)
 library(writexl)
 
 # Set the working directory to where the Excel files are saved
-setwd("/Users/Inez/VU/RMCDP/Year 2/Research Project 2/STAR/EME")
+setwd("")
 
 # Define the number of runs
 runs <- c("run1", "run2", "run3")
