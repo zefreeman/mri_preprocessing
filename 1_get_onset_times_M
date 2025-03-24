@@ -1,0 +1,164 @@
+import os
+import pandas as pd
+import numpy
+import scipy.io
+
+def get_sots_all(df, run_n):
+
+    # create column names as needed for the multiple conditions file for SPM
+    names = ['OwnCue','OwnElaborate', 'OwnRating','OtherCue','OtherElaborate','OtherRating','GroundCueOnset']
+    names = numpy.asarray(names, dtype=object)
+
+    # these are columns we want
+    cols = ['TimeAtStartOfTrial','ElaborateCueOnset','RatingOnset']
+    duration_cols = ['CueDuration', 'ElaborateCueDuration', 'RatingDuration']
+    onsets = []
+    durations = []
+
+    # this function does one run per pass, for both own and other trials
+    own_df = df.loc[(df.IsOwn == 1)]
+    own_df = own_df.loc[(own_df.Run == run_n)]
+    own_df.reset_index(inplace=True, drop=True)
+    for i in range(len(cols)):
+        col = cols[i]
+        print(col)
+        duration = duration_cols[i]
+        array = numpy.asarray(own_df[col].tolist())
+        onsets.append(array)
+        if col == 'TimeAtStartOfTrial':
+            durations.append([float(0)] * len(own_df[col]))
+        else:
+            durations.append(own_df[duration].tolist())
+    
+    other_df = df.loc[(df.IsOwn == 0)]
+    other_df = other_df.loc[(other_df.Run == run_n)]
+    other_df.reset_index(inplace=True, drop=True)
+    for i in range(len(cols)):
+        col = cols[i]
+        duration = duration_cols[i]
+        array = numpy.asarray(other_df[col].tolist())
+        onsets.append(array)
+        if col == 'TimeAtStartOfTrial':
+            durations.append([float(0)] * len(other_df[col]))
+        else:
+            durations.append(other_df[duration].tolist())
+
+    # since we set 'Not Used' to -1 earlier now we need to drop all the values which are -1/1000
+    ground_df = df.loc[(df.Run == run_n)]
+    ground_df = ground_df.loc[ground_df.GroundCueOnset != -1/1000]
+    ground_array = numpy.asarray(ground_df['GroundCueOnset'].tolist())
+    ground_durs = numpy.asarray(ground_df['GroundCueDuration'].tolist())
+    onsets.append(ground_array)
+    durations.append(ground_durs)
+    
+    run_dict = {
+    'names': names,
+    'onsets': onsets,
+    'durations': durations
+    }
+
+    return run_dict
+
+#loops through each directory in taskfiles_M
+for root, dirs, files in os.walk('taskfiles_M'):
+    
+    for d in dirs:
+
+        #looping through each file in each directory
+        for f in os.listdir('taskfiles_M/' + d):
+        
+            # here you should insert the filepaths of interest for your subject
+
+            print('taskfiles_M/' + d + '/' + f)
+            
+            if 'Rpt1' in f:
+                run1 = pd.read_csv('taskfiles_M/' + d + '/' + f)
+            elif 'Rpt2' in f:
+                run2 = pd.read_csv('taskfiles_M/' + d + '/' + f)
+            elif 'Rpt3' in f:
+                run3 = pd.read_csv('taskfiles_M/' + d + '/' + f)
+    
+        run1['Run']= 1
+        run2['Run']= 2
+        run3['Run']= 3
+
+        # this line is not essential for what we are doing, but I left it in bcs I don't know its purpose
+        df = pd.concat([run1, run2, run3]).reset_index() # Vertical concatenate runs to calculate median split
+
+        df = df[df.TrialType == 'Trial']   # Filter out non-trial rows
+
+        # as above, no idea what this is
+        df['RatingSplit'] = (df.Rating > df.Rating.median()).astype(int) # Calculate median split for now-ness ratings, 1 is greater than median, 0 is less than median
+
+        df.IsOwn = df.IsOwn.eq('Yes').mul(1)# Convert IsOwn column to 1s and 0s
+        df.GroundCueOnset = df.GroundCueOnset.replace('Not Used', -1) #convert GroundCueOnset to numerical values for later removal
+        df.GroundCueOnset = pd.to_numeric(df.GroundCueOnset)
+        df.CueDuration = pd.to_numeric(df.CueDuration)
+        df.RatingOnset = pd.to_numeric(df.RatingOnset) # Convert RatingOnset to numeric datatype (was string)
+
+        # let's keep only the columns we need later
+        df = df[['TimeAtStartOfTrial', 'CueDuration','ElaborateCueOnset', 'PostElaborateFixOnset','RatingOnset', 'RatingDuration', 'GroundCueOnset', 'GroundCueDuration','IsOwn','Run']]
+
+        # convert miliseconds to seconds
+        df[['TimeAtStartOfTrial', 'CueDuration','ElaborateCueOnset', 'PostElaborateFixOnset','RatingOnset', 'RatingDuration', 'GroundCueOnset', 'GroundCueDuration']] = df[['TimeAtStartOfTrial', 'CueDuration','ElaborateCueOnset', 'PostElaborateFixOnset','RatingOnset', 'RatingDuration', 'GroundCueOnset', 'GroundCueDuration']] / 1000
+
+        # since the elaborate cue does not have a column for duration, we calculate it manually
+        df['ElaborateCueDuration'] = df['PostElaborateFixOnset'] - df['ElaborateCueOnset']
+
+        output_run1 = get_sots_all(df, 1)
+        output_run2 = get_sots_all(df, 2)
+        output_run3 = get_sots_all(df, 3)
+
+        scipy.io.savemat((d + '_run1.mat'), output_run1)
+        scipy.io.savemat((d + '_run2.mat'), output_run2)
+        scipy.io.savemat((d + '_run3.mat'), output_run3)
+
+        # with open('Onsets and Durations.txt', 'a') as textfile:
+
+        #    textfile.write('taskfiles_L/' + d)
+
+        #    textfile.write('Run 1 \n')
+        #    textfile.write('Names: \n')
+        #    for n in output_run1['names']:
+        #        textfile.write(n + '\n')
+        #    textfile.write('Onsets: \n')
+        #    for o in output_run1['onsets']:
+        #        textfile.write(str(o) + '\n')
+        #    textfile.write('Durations: \n')
+        #    for x in output_run1['durations']:
+        #        textfile.write(str(x) + '\n')
+
+        #    textfile.write('Run 2 \n')
+        #    textfile.write('Names: \n')
+        #    for n in output_run2['names']:
+        #        textfile.write(n + '\n')
+        #    textfile.write('Onsets: \n')
+        #    for o in output_run2['onsets']:
+        #        textfile.write(str(o) + '\n')
+        #    textfile.write('Durations: \n')
+        #    for x in output_run2['durations']:
+        #        textfile.write(str(x) + '\n')    
+
+        #    textfile.write('Run 3 \n')
+        #    textfile.write('Names: \n')
+        #    for n in output_run3['names']:
+        #        textfile.write(n + '\n')
+        #    textfile.write('Onsets: \n')
+        #    for o in output_run3['onsets']:
+        #        textfile.write(str(o) + '\n')
+        #    textfile.write('Durations: \n')
+        #    for x in output_run3['durations']:
+        #        textfile.write(str(x) + '\n')
+            
+        #    textfile.close()
+        
+        # print(output_run1)
+        # print(output_run2)
+        # print(output_run3)
+
+        # create folders for these otherwise crashes
+        # scipy.io.savemat('sots/sots_glm/run1.mat', output_run1)
+        # scipy.io.savemat('sots/sots_glm/run2.mat', output_run2)
+        # scipy.io.savemat('sots/sots_glm/run3.mat', output_run3)
+
+
