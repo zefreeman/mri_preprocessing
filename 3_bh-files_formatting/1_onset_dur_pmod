@@ -51,7 +51,7 @@ def get_sots_all(df, run_n):
     onsets.append(ground_array)
     durations.append(ground_durs)
     
-    # Extract ratings based on conditions
+    # Extract ratings based on conditions (specific to pmod analysis)
     own_ratings = df.loc[(df.IsOwn == 1) & (df.GroundCueResponse == 'Not Used'), 'Rating'].tolist()
     other_ratings = df.loc[(df.IsOwn == 0) & (df.GroundCueResponse == 'Not Used'), 'Rating'].tolist()
     
@@ -69,24 +69,24 @@ def get_sots_all(df, run_n):
 
     return run_dict
 
-#loops through each directory in taskfiles_N
-for root, dirs, files in os.walk('taskfiles_N'):
+#loops through each directory in L2_OnsDur
+for root, dirs, files in os.walk('data/T2_task_files/L2_OnsDur'):
     
     for d in dirs:
 
         #looping through each file in each directory
-        for f in os.listdir('taskfiles_N/' + d):
+        for f in os.listdir('L2_OnsDur/' + d):
         
-            # here you should insert the filepaths of interest for your subject
+            # does this work automatically?? "(here you should insert the filepaths of interest for your subject)""
 
-            print('taskfiles_N/' + d + '/' + f)
+            print('L2_OnsDur/' + d + '/' + f)
             
-            if 'Rpt1' in f:
-                run1 = pd.read_csv('taskfiles_N/' + d + '/' + f)
-            elif 'Rpt2' in f:
-                run2 = pd.read_csv('taskfiles_N/' + d + '/' + f)
-            elif 'Rpt3' in f:
-                run3 = pd.read_csv('taskfiles_N/' + d + '/' + f)
+            if 'run1' in f: #needs to be changed to 'Rpt1' in f for M? N? run1 for L
+                run1 = pd.read_csv('L2_OnsDur/' + d + '/' + f)
+            elif 'run2' in f:
+                run2 = pd.read_csv('L2_OnsDur/' + d + '/' + f)
+            elif 'run3' in f:
+                run3 = pd.read_csv('L2_OnsDur/' + d + '/' + f)
     
         run1['Run']= 1
         run2['Run']= 2
