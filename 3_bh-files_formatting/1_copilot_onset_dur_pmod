@@ -1,0 +1,154 @@
+import os
+import pandas as pd
+import numpy
+import scipy.io
+
+def get_sots_all(df, run_n):
+    # Create column names as needed for the multiple conditions file for SPM
+    names = ['OwnCue', 'OwnElaborate', 'OwnRating', 'OtherCue', 'OtherElaborate', 'OtherRating', 'GroundCueOnset']
+    names = numpy.asarray(names, dtype=object)
+
+    # Columns we want
+    cols = ['TimeAtStartOfTrial', 'ElaborateCueOnset', 'RatingOnset', 'Rating']  # Added 'Rating'
+    duration_cols = ['CueDuration', 'ElaborateCueDuration', 'RatingDuration', None]  # No duration for 'Rating'
+    onsets = []
+    durations = []
+
+    # Process "Own" trials
+    own_df = df.loc[(df.IsOwn == 1) & (df.Run == run_n)]
+    own_df.reset_index(inplace=True, drop=True)
+    for i in range(len(cols)):
+        col = cols[i]
+        if col == 'Rating':  # No duration for 'Rating'
+            array = numpy.asarray(own_df[col].tolist())
+            onsets.append(array)
+            durations.append([float(0)] * len(own_df[col]))  # Zero duration for 'Rating'
+        else:
+            duration = duration_cols[i]
+            array = numpy.asarray(own_df[col].tolist())
+            onsets.append(array)
+            if col == 'TimeAtStartOfTrial':
+                durations.append([float(0)] * len(own_df[col]))
+            else:
+                durations.append(own_df[duration].tolist())
+
+    # Process "Other" trials
+    other_df = df.loc[(df.IsOwn == 0) & (df.Run == run_n)]
+    other_df.reset_index(inplace=True, drop=True)
+    for i in range(len(cols)):
+        col = cols[i]
+        if col == 'Rating':  # No duration for 'Rating'
+            array = numpy.asarray(other_df[col].tolist())
+            onsets.append(array)
+            durations.append([float(0)] * len(other_df[col]))  # Zero duration for 'Rating'
+        else:
+            duration = duration_cols[i]
+            array = numpy.asarray(other_df[col].tolist())
+            onsets.append(array)
+            if col == 'TimeAtStartOfTrial':
+                durations.append([float(0)] * len(other_df[col]))
+            else:
+                durations.append(other_df[duration].tolist())
+
+    # Process GroundCueOnset
+    ground_df = df.loc[(df.Run == run_n) & (df.GroundCueOnset != -1 / 1000)]
+    ground_array = numpy.asarray(ground_df['GroundCueOnset'].tolist())
+    ground_durs = numpy.asarray(ground_df['GroundCueDuration'].tolist())
+    onsets.append(ground_array)
+    durations.append(ground_durs)
+
+    # Extract ratings based on conditions (specific to pmod analysis)
+    own_ratings = df.loc[(df.IsOwn == 1) & (df.GroundCueResponse == 'Not Used'), 'Rating'].tolist()
+    other_ratings = df.loc[(df.IsOwn == 0) & (df.GroundCueResponse == 'Not Used'), 'Rating'].tolist()
+
+    pmod = {
+        'OwnRating': own_ratings,  # Parametric modulator for Own condition
+        'OtherRating': other_ratings  # Parametric modulator for Other condition
+    }
+
+    # Create the output dictionary
+    run_dict = {
+        'names': names,
+        'onsets': onsets,
+        'durations': durations,
+        'pmod': pmod
+    }
+
+    return run_dict
+
+# Loop through each directory in L2_OnsDur
+for root, dirs, files in os.walk('L2_OnsDur'):
+    for d in dirs:
+        print(f"Processing directory: {d}")
+        run1, run2, run3 = None, None, None
+
+        # Loop through each file in the directory
+        for f in os.listdir(os.path.join('L2_OnsDur', d)):
+            file_path = os.path.join('L2_OnsDur', d, f)
+            print(f"Processing file: {file_path}")
+            try:
+                if 'run1' in f:
+                    run1 = pd.read_csv(file_path)
+                    print(f"Loaded run1 from {file_path}")
+                elif 'run2' in f:
+                    run2 = pd.read_csv(file_path)
+                    print(f"Loaded run2 from {file_path}")
+                elif 'run3' in f:
+                    run3 = pd.read_csv(file_path)
+                    print(f"Loaded run3 from {file_path}")
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+                continue
+
+        # Ensure all runs are loaded
+        if run1 is None or run2 is None or run3 is None:
+            print(f"Missing runs for directory: {d}")
+            print(f"run1: {run1 is not None}, run2: {run2 is not None}, run3: {run3 is not None}")
+            continue
+
+        # Add Run column
+        run1['Run'] = 1
+        run2['Run'] = 2
+        run3['Run'] = 3
+
+        # Concatenate runs
+        df = pd.concat([run1, run2, run3]).reset_index(drop=True)
+
+        # Filter out non-trial rows
+        df = df[df.TrialType == 'Trial']
+
+        # Convert IsOwn column to 1s and 0s
+        df.IsOwn = df.IsOwn.eq('Yes').mul(1)
+
+        # Convert GroundCueOnset to numeric and handle "Not Used"
+        df.GroundCueOnset = df.GroundCueOnset.replace('Not Used', -1)
+        df.GroundCueOnset = pd.to_numeric(df.GroundCueOnset)
+
+        # Convert other columns to numeric
+        df.CueDuration = pd.to_numeric(df.CueDuration)
+        df.RatingOnset = pd.to_numeric(df.RatingOnset)
+
+        # Keep only the necessary columns
+        df = df[['TimeAtStartOfTrial', 'CueDuration', 'ElaborateCueOnset', 'PostElaborateFixOnset',
+                 'RatingOnset', 'RatingDuration', 'GroundCueOnset', 'GroundCueDuration', 'IsOwn', 'Run', 'Rating', 'GroundCueResponse']]
+
+        # Convert milliseconds to seconds
+        df[['TimeAtStartOfTrial', 'CueDuration', 'ElaborateCueOnset', 'PostElaborateFixOnset',
+            'RatingOnset', 'RatingDuration', 'GroundCueOnset', 'GroundCueDuration']] /= 1000
+
+        # Calculate ElaborateCueDuration
+        df['ElaborateCueDuration'] = df['PostElaborateFixOnset'] - df['ElaborateCueOnset']
+
+        # Generate outputs for each run
+        try:
+            output_run1 = get_sots_all(df, 1)
+            output_run2 = get_sots_all(df, 2)
+            output_run3 = get_sots_all(df, 3)
+
+            # Save .mat files
+            scipy.io.savemat(f"{d}_run1.mat", output_run1)
+            scipy.io.savemat(f"{d}_run2.mat", output_run2)
+            scipy.io.savemat(f"{d}_run3.mat", output_run3)
+            print(f"Saved .mat files for directory: {d}")
+        except Exception as e:
+            print(f"Error saving .mat files for directory {d}: {e}")

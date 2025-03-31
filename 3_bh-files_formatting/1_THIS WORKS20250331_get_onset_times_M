@@ -59,24 +59,24 @@ def get_sots_all(df, run_n):
 
     return run_dict
 
-#loops through each directory in taskfiles_M
-for root, dirs, files in os.walk('taskfiles_M'):
+#loops through each directory in L2_OnsDur
+for root, dirs, files in os.walk('L2_OnsDur'):
     
     for d in dirs:
 
         #looping through each file in each directory
-        for f in os.listdir('taskfiles_M/' + d):
+        for f in os.listdir('L2_OnsDur/' + d):
         
             # here you should insert the filepaths of interest for your subject
 
-            print('taskfiles_M/' + d + '/' + f)
+            print('L2_OnsDur/' + d + '/' + f)
             
             if 'Rpt1' in f:
-                run1 = pd.read_csv('taskfiles_M/' + d + '/' + f)
+                run1 = pd.read_csv('L2_OnsDur/' + d + '/' + f)
             elif 'Rpt2' in f:
-                run2 = pd.read_csv('taskfiles_M/' + d + '/' + f)
+                run2 = pd.read_csv('L2_OnsDur/' + d + '/' + f)
             elif 'Rpt3' in f:
-                run3 = pd.read_csv('taskfiles_M/' + d + '/' + f)
+                run3 = pd.read_csv('L2_OnsDur/' + d + '/' + f)
     
         run1['Run']= 1
         run2['Run']= 2
