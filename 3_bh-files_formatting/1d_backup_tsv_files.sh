@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define the base path to the derivatives folder
-base_folder="/data/project/STAR/STAR_preprocessed/N_fmriprep/data/derivatives"
+base_folder="/data/project/STAR/STAR_preprocessed/L2_fmriprep/data/derivatives"
 
 # Loop through all sub-IDXX folders inside the derivatives folder
-for sub_folder in "$base_folder"/sub-ID*/ses-mri01; do
+for sub_folder in "$base_folder"/sub-ID*/ses-mri02; do
     if [ -d "$sub_folder" ]; then
         # Define the original_tsv folder path
         original_tsv_folder="$sub_folder/original_tsv"
