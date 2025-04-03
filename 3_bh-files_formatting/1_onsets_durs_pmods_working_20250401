@@ -1,0 +1,163 @@
+import os
+import pandas as pd
+import numpy
+import scipy.io
+
+def get_sots_all(df, run_n):
+    # Create condition names for SPM
+    names = ['OwnCue', 'OwnElaborate', 'OwnRating', 'OtherCue', 'OtherElaborate', 'OtherRating', 'GroundCueOnset']
+    names = numpy.asarray(names, dtype=object)
+    
+    # Define columns for onsets and their corresponding duration columns
+    cols = ['TimeAtStartOfTrial', 'ElaborateCueOnset', 'RatingOnset']
+    duration_cols = ['CueDuration', 'ElaborateCueDuration', 'RatingDuration']
+    onsets = []
+    durations = []
+    pmod = {}  # Will be replaced later but need in order o build onsets/durations
+
+    # Process "Own" trials
+    own_df = df.loc[(df.IsOwn == 1) & (df.Run == run_n)]
+    own_df.reset_index(inplace=True, drop=True)
+    for i in range(len(cols)):
+        col = cols[i]
+        dur = duration_cols[i]
+        arr = numpy.asarray(own_df[col].tolist()).reshape(-1, 1)
+        onsets.append(arr)
+        if col == 'TimeAtStartOfTrial':
+            durations.append(numpy.zeros((len(own_df[col]), 1)))
+        else:
+            durations.append(numpy.asarray(own_df[dur].tolist()).reshape(-1, 1))
+    
+    # Process "Other" trials
+    other_df = df.loc[(df.IsOwn == 0) & (df.Run == run_n)]
+    other_df.reset_index(inplace=True, drop=True)
+    for i in range(len(cols)):
+        col = cols[i]
+        dur = duration_cols[i]
+        arr = numpy.asarray(other_df[col].tolist()).reshape(-1, 1)
+        onsets.append(arr)
+        if col == 'TimeAtStartOfTrial':
+            durations.append(numpy.zeros((len(other_df[col]), 1)))
+        else:
+            durations.append(numpy.asarray(other_df[dur].tolist()).reshape(-1, 1))
+    
+    # Process GroundCueOnset
+    ground_df = df.loc[(df.Run == run_n) & (df.GroundCueOnset != -1/1000)]
+    ground_array = numpy.asarray(ground_df['GroundCueOnset'].tolist()).reshape(-1, 1)
+    ground_durs = numpy.asarray(ground_df['GroundCueDuration'].tolist()).reshape(-1, 1)
+    onsets.append(ground_array)
+    durations.append(ground_durs)
+    
+    # Modify durations: change first cell and fourth cell to 2 (as column vectors)
+    if len(durations) > 0:
+        durations[0] = numpy.full((len(durations[0]), 1), 2)
+    if len(durations) > 3:
+        durations[3] = numpy.full((len(durations[3]), 1), 2)
+        
+    # Convert onsets and durations to numpy arrays with object dtype
+    onsets = numpy.array(onsets, dtype=object)
+    durations = numpy.array(durations, dtype=object)
+    
+    # Now build pmod as a 1×7 cell array (Python list of length 7).
+    # For the Own trials, use all ratings from own_df as a column vector.
+    own_ratings = numpy.asarray(own_df['Rating'].tolist()).reshape(-1, 1)
+    # For the Other trials, use all ratings from other_df as a column vector.
+    other_ratings = numpy.asarray(other_df['Rating'].tolist()).reshape(-1, 1)
+    
+    # Set cells 1–3 to be the Own ratings (each cell gets the identical all‐own vector),
+    # and cells 4–6 to be the Other ratings.
+    pmod = [None] * 7
+    for i in range(3):
+        pmod[i] = own_ratings
+    for i in range(3):
+        pmod[i+3] = other_ratings
+    # Cell 7 is an empty column vector.
+    pmod[6] = numpy.empty((0, 1))
+    
+    # Build and return the output dictionary.
+    run_dict = {
+        'names': names,
+        'onsets': onsets,
+        'durations': durations,
+        'pmod': pmod
+    }
+    return run_dict
+
+
+# Loop through each directory in L2_OnsDur
+for root, dirs, files in os.walk('L2_OnsDur'):
+    for d in dirs:
+        print(f"Processing directory: {d}")
+        run1, run2, run3 = None, None, None
+
+        # Loop through each file in the directory
+        for f in os.listdir(os.path.join('L2_OnsDur', d)):
+            file_path = os.path.join('L2_OnsDur', d, f)
+            print(f"Processing file: {file_path}")
+            try:
+                if 'run1' in f:
+                    run1 = pd.read_csv(file_path)
+                    print(f"Loaded run1 from {file_path}")
+                elif 'run2' in f:
+                    run2 = pd.read_csv(file_path)
+                    print(f"Loaded run2 from {file_path}")
+                elif 'run3' in f:
+                    run3 = pd.read_csv(file_path)
+                    print(f"Loaded run3 from {file_path}")
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+                continue
+
+        # Add Run column if runs are loaded
+        if run1 is not None:
+            run1['Run'] = 1
+        if run2 is not None:
+            run2['Run'] = 2
+        if run3 is not None:
+            run3['Run'] = 3
+
+        # Concatenate available runs
+        runs = [r for r in [run1, run2, run3] if r is not None]
+        if not runs:
+            print(f"No valid runs found for directory: {d}")
+            continue
+
+        df = pd.concat(runs).reset_index(drop=True)
+
+        # Filter out non-trial rows
+        df = df[df.TrialType == 'Trial']
+
+        # Convert IsOwn column to 1s and 0s
+        df.IsOwn = df.IsOwn.eq('Yes').mul(1)
+
+        # Convert GroundCueOnset to numeric and handle "Not Used"
+        df.GroundCueOnset = df.GroundCueOnset.replace('Not Used', -1)
+        df.GroundCueOnset = pd.to_numeric(df.GroundCueOnset)
+
+        # Convert other columns to numeric
+        df.CueDuration = pd.to_numeric(df.CueDuration)
+        df.RatingOnset = pd.to_numeric(df.RatingOnset)
+
+        # Keep only the necessary columns
+        df = df[['TimeAtStartOfTrial', 'CueDuration', 'ElaborateCueOnset', 'PostElaborateFixOnset',
+                 'RatingOnset', 'RatingDuration', 'GroundCueOnset', 'GroundCueDuration', 'IsOwn', 'Run', 'Rating']]
+
+        # Convert milliseconds to seconds
+        df[['TimeAtStartOfTrial', 'CueDuration', 'ElaborateCueOnset', 'PostElaborateFixOnset',
+            'RatingOnset', 'RatingDuration', 'GroundCueOnset', 'GroundCueDuration']] /= 1000
+
+        # Calculate ElaborateCueDuration
+        df['ElaborateCueDuration'] = df['PostElaborateFixOnset'] - df['ElaborateCueOnset']
+
+        # Generate outputs for each available run
+        for run_n in [1, 2, 3]:
+            if run_n not in df['Run'].unique():
+                print(f"Run {run_n} not found in directory: {d}")
+                continue
+            try:
+                output_run = get_sots_all(df, run_n)
+                mat_file = f"{d}_task-run{run_n}_pmbh.mat"
+                scipy.io.savemat(mat_file, output_run)
+                print(f"Saved {mat_file}")
+            except Exception as e:
+                print(f"Error processing run {run_n} in directory {d}: {e}")
