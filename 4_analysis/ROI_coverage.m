@@ -100,9 +100,10 @@ for i = 1:length(subs)
     end
 end
 
+
 % Create table from results and save to CSV
-T = cell2table(results, 'VariableNames', {'SubjectID', 'ROI', 'OverlapVoxels', 'ROIVoxels', 'ProportionOverlap'});
+T = cell2table(results, 'VariableNames', {'SubjectID', 'MaskVoxelCount'});
 disp(T);
-csv_file = fullfile(dataroot, 'roi_overlap_all_subjects_M1.csv');
+csv_file = fullfile(dataroot, 'mask_voxel_count_all_subjects.csv');
 writetable(T, csv_file);
 fprintf('Results saved to %s\n', csv_file);
