@@ -53,26 +53,26 @@ colnames(data_T2)[108] <- "run1vv_T2"
 colnames(data_T2)[109] <- "run2vv_T2"
 colnames(data_T2)[110] <- "run3vv_T2"
 colnames(data_T2)[112] <- "vmpfc_v_total_T2"
-colnames(data_T2)[113] <- "run1vd_T2" # not using
-colnames(data_T2)[114] <- "run2vd_T2" # not using
-colnames(data_T2)[115] <- "run3vd_T2" # not using
-colnames(data_T2)[116] <- "vmpfc_d_total_T2" # not using
-colnames(data_T2)[117] <- "run1al_T2"
-colnames(data_T2)[118] <- "run2al_T2"
-colnames(data_T2)[119] <- "run3al_T2"
-colnames(data_T2)[120] <- "amyg_l_total_T2"
-colnames(data_T2)[121] <- "run1ar_T2"
-colnames(data_T2)[122] <- "run2ar_T2"
-colnames(data_T2)[123] <- "run3ar_T2"
-colnames(data_T2)[124] <- "amyg_r_total_T2"
-colnames(data_T2)[125] <- "run1hl_T2"
-colnames(data_T2)[126] <- "run2hl_T2"
-colnames(data_T2)[127] <- "run3hl_T2"
-colnames(data_T2)[128] <- "hipp_l_total_T2"
-colnames(data_T2)[129] <- "run1hr_T2"
-colnames(data_T2)[130] <- "run2hr_T2"
-colnames(data_T2)[131] <- "run3hr_T2"
-colnames(data_T2)[132] <- "hipp_r_total_T2"
+# colnames(data_T2)[113] <- "run1vd_T2" # not using
+# colnames(data_T2)[114] <- "run2vd_T2" # not using
+# colnames(data_T2)[115] <- "run3vd_T2" # not using
+# colnames(data_T2)[116] <- "vmpfc_d_total_T2" # not using
+colnames(data_T2)[132] <- "run1al_T2"
+colnames(data_T2)[133] <- "run2al_T2"
+colnames(data_T2)[134] <- "run3al_T2"
+colnames(data_T2)[135] <- "amyg_l_total_T2"
+colnames(data_T2)[144] <- "run1ar_T2"
+colnames(data_T2)[145] <- "run2ar_T2"
+colnames(data_T2)[146] <- "run3ar_T2"
+colnames(data_T2)[147] <- "amyg_r_total_T2"
+colnames(data_T2)[156] <- "run1hl_T2"
+colnames(data_T2)[157] <- "run2hl_T2"
+colnames(data_T2)[158] <- "run3hl_T2"
+colnames(data_T2)[159] <- "hipp_l_total_T2"
+colnames(data_T2)[168] <- "run1hr_T2"
+colnames(data_T2)[169] <- "run2hr_T2"
+colnames(data_T2)[170] <- "run3hr_T2"
+colnames(data_T2)[171] <- "hipp_r_total_T2"
 
 data_T2 <- data_T2 %>%
   mutate(
@@ -81,9 +81,9 @@ data_T2 <- data_T2 %>%
     run2vv_ch = run2vv_T2 - run2vv,
     run3vv_ch = run3vv_T2 - run3vv,
     # vmPFC d
-    run1vd_ch = run1vd_T2 - run1vd,
-    run2vd_ch = run2vd_T2 - run2vd,
-    run3vd_ch = run3vd_T2 - run3vd,
+    # run1vd_ch = run1vd_T2 - run1vd,
+    # run2vd_ch = run2vd_T2 - run2vd,
+    # run3vd_ch = run3vd_T2 - run3vd,
     # Amygdala left
     run1al_ch = run1al_T2 - run1al,
     run2al_ch = run2al_T2 - run2al,
@@ -102,7 +102,7 @@ data_T2 <- data_T2 %>%
     run3hr_ch = run3hr_T2 - run3hr
   )
 # does avoidance score explain variation in ROI signal?
-# wide to long including T1 and T2
+# wide to long including T1 and T2 change scores!
 data_long_runs_T2 <- data_T2 %>%
   pivot_longer(
     cols = c(run1vv_ch, run2vv_ch, run3vv_ch, 
@@ -128,7 +128,7 @@ data_long_runs_T2 <- data_T2 %>%
     #   ROI %in% c("hl","hr") ~ "hippocampus"
     # )
   ) %>%
-  select(subject, site, CAPSB, age, run, ROI, value, now_own_mean, STAR_ID)
+  select(subject, site, CAPS.POST.PRE, caps_b_t3, age, run, ROI, value, now_own_mean, STAR_ID)
 
 
 # # wide to long for avoidance scores
@@ -193,34 +193,6 @@ data_long_runs_T2 <- data_T2 %>%
 #   left_join(data_long_now, by = c("subject", "run"))
 
 
-################################
-# CHANGE SCORE CALCULATION
-################################
-# # Aggregate T1
-# data_long_T1_agg <- data_long_runs_T2 %>%
-#   group_by(subject, run, ROI, site, CAPSB, age, STAR_ID, now_own_mean) %>%
-#   summarise(value_T1 = mean(value_T1, na.rm = TRUE), .groups = "drop")
-
-# # Aggregate T2
-# data_long_T2_agg <- data_long_T2 %>%
-#   group_by(subject, run, ROI, site, CAPSB, age, STAR_ID, now_own_mean) %>%
-#   summarise(value_T2 = mean(value_T2, na.rm = TRUE), .groups = "drop")
-
-# # Join aggregated data and compute change
-# data_long_change <- data_long_T1_agg %>%
-#   left_join(data_long_T2_agg, by = c("subject", "run", "ROI", "site", "CAPSB", "age", "STAR_ID", "now_own_mean")) %>%
-#   mutate(
-#     change_value = value_T2 - value_T1,
-#     hemi = case_when(
-#       ROI %in% c("al", "hl") ~ "L",
-#       ROI %in% c("ar", "hr") ~ "R",
-#       TRUE ~ NA_character_
-#     )
-#   ) %>%
-#   select(subject, site, CAPSB, age, run, ROI, hemi, value_T1, value_T2, change_value, now_own_mean, STAR_ID)
-
-
-
 
 #######################################################################################
 --------------------------------------------------------------------------
@@ -228,10 +200,9 @@ data_long_runs_T2 <- data_T2 %>%
 ---------------------------------------------------------------------------
 #######################################################################################
 
-data_long_runs_T2 <- data_long_runs_T2 %>%
-  mutate(run = as.numeric(run))
-library(performance)
-
+# data_long_runs_T2 <- data_long_runs_T2 %>%
+#   mutate(run = as.numeric(run))
+# library(performance)
 
 # Combine left/right amygdala into one dataset with hemi variable
 amygdala_data_T2 <- data_long_runs_T2 %>%
@@ -241,6 +212,9 @@ amygdala_data_T2 <- data_long_runs_T2 %>%
     run = as.factor(run)
   )
 
+amygdala_data_T2 <- amygdala_data_T2 %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
 # Run the mixed modelREPORTING THIS FOR AMYGDALA
 results_amygdala_T2 <- amygdala_data_T2 %>%
   mutate(run = as.factor(run)) %>%
@@ -248,7 +222,7 @@ results_amygdala_T2 <- amygdala_data_T2 %>%
   map(function(df) {
     cat("Running ROI: amygdala\n")
     m1 <- try(
-      lmer(value ~ hemi + site + age + run * CAPSB + (1 | subject),
+      lmer(value ~ hemi + site + age + run * CAPS.POST.PRE + (1 | subject),
            data = df, REML = FALSE),
       silent = TRUE
     )
@@ -263,25 +237,47 @@ results_amygdala_T2 <- amygdala_data_T2 %>%
 
 map(results_amygdala_T2, summary)
 
+# Run the mixed model                                                                   REPORTING THIS FOR AMYGDALA
 results_amygdala_T2 <- list(
   hippocampus = try(
-    lmer(value ~ hemi + site + age + run * CAPSB + (1 | subject),
+    lmer(value ~ hemi + site + age + run * CAPS.POST.PRE + (1 | subject),
          data = amygdala_data_T2,
          REML = FALSE),
     silent = TRUE
   )
 )
 map(results_amygdala_T2, summary)
+
 # Extract fixed effects from all ROIs
-results_table <- map_dfr(results_amygdala, function(model) {
+results_table <- map_dfr(results_amygdala_T2, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
 
 # Write to CSV
-write.csv(results_table, "results_amygdala.csv", row.names = FALSE)
+write.csv(results_table, "results_amygdala_ch-scores.csv", row.names = FALSE)
 
+# Run the mixed model                                                               NO CAPS CHECK FOR AMYGDALA
+results_amygdala_T2_nocaps <- list(
+  hippocampus = try(
+    lmer(value ~ hemi + site + age + run + (1 | subject),
+         data = amygdala_data_T2,
+         REML = FALSE),
+    silent = TRUE
+  )
+)
+map(results_amygdala_T2_nocaps, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_amygdala_T2_nocaps, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_amygdala_ch-scores_nocaps.csv", row.names = FALSE)
 
 # Combine left/right hippocampus into one dataset with hemi variable
 hipp_data_T2 <- data_long_runs_T2 %>%
@@ -291,30 +287,86 @@ hipp_data_T2 <- data_long_runs_T2 %>%
     run = as.factor(run)
   )
 
+hipp_data_T2 <- hipp_data_T2 %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
 # Run the mixed model                                                                   REPORTING THIS FOR HIPPOCAMPUS
-results_hipp <- list(
+results_hipp_T2 <- list(
   hippocampus = try(
-    lmer(value ~ hemi + site + age + run * CAPSB + (1 | subject),
+    lmer(value ~ hemi + site + age + run * CAPS.POST.PRE + (1 | subject),
          data = hipp_data_T2,
          REML = FALSE),
     silent = TRUE
   )
 )
-map(results_hipp, summary)
-
-
-
-
+map(results_hipp_T2, summary)
 
 # Extract fixed effects from all ROIs
-results_table <- map_dfr(results_hipp, function(model) {
+results_table <- map_dfr(results_hipp_T2, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
 
 # Write to CSV
-write.csv(results_table, "results_hipp.csv", row.names = FALSE)
+write.csv(results_table, "results_hipp_ch-scores.csv", row.names = FALSE)
+
+# Run the mixed model                                                               NO CAPS CHECK FOR hippocampus
+results_hipp_T2_nocaps <- list(
+  hippocampus = try(
+    lmer(value ~ hemi + site + age + run + (1 | subject),
+         data = hipp_data_T2,
+         REML = FALSE),
+    silent = TRUE
+  )
+)
+map(results_hipp_T2_nocaps, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_hipp_T2_nocaps, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_hipp_ch-scores_nocaps.csv", row.names = FALSE)
+
+
+data_long_runs_T2 <- data_long_runs_T2 %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
+results_m2_T2 <- data_long_runs_T2 %>%                               #####             REPORTING FOR VMPFC - ALSO NULL
+  mutate(run = as.factor(run)) %>%
+  group_split(ROI) %>%
+  set_names(unique(data_long_runs_T2$ROI)) %>%
+  map(function(data_long_runs_T2) {
+    cat("Running ROI:", unique(data_long_runs_T2$ROI), "\n")
+    m2 <- try(
+      lmer(value ~ CAPS.POST.PRE * run + site + age + (1 | subject),
+           data = data_long_runs_T2, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m2, "try-error")) {
+      cat("failed for:", unique(data_long_runs_T2$ROI), "\n")
+      return(NULL)
+    }
+    cat("succeeded for:", unique(data_long_runs_T2$ROI), "\n")
+    return(m2)
+  })
+#results_m2
+map(results_m2_T2, summary)
+
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_m2_T2, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_vmpfc_ch-scores.csv", row.names = FALSE)
 
 
 
@@ -322,68 +374,197 @@ write.csv(results_table, "results_hipp.csv", row.names = FALSE)
 
 
 #-----------------------------------------------------------------------------
-# SIMPLEST, no interaction, no avoidance
-# lmer(roi_signal ~ CAPSB + run + site + age + (1 + subject),
+# JUST POST TIMEPOINT TO REPLICATE THE BASELINE ANALYSES 
+#-----------------------------------------------------------------------------
+# does avoidance score explain variation in ROI signal?                       #####          CHANGING TO T2 ONLY
+# wide to long including T1 and T2
+data_long_runs_T2only <- data_T2 %>%
+  pivot_longer(
+    cols = c(
+            #  run1vv_ch, run2vv_ch, run3vv_ch, 
+            #  run1al_ch, run2al_ch, run3al_ch, 
+            #  run1ar_ch, run2ar_ch, run3ar_ch, 
+            #  run1hl_ch, run2hl_ch, run3hl_ch, 
+            #  run1hr_ch, run2hr_ch, run3hr_ch),
+             run1vv_T2, run2vv_T2, run3vv_T2,
+             run1al_T2, run2al_T2, run3al_T2,
+             run1ar_T2, run2ar_T2, run3ar_T2,
+             run1hl_T2, run2hl_T2, run3hl_T2,
+             run1hr_T2, run2hr_T2, run3hr_T2),
+    names_to = c("run", "ROI"),
+    names_pattern = "run([0-9]+)([a-zA-Z]+)",
+    values_to = "value"
+  ) %>%
+  mutate(
+    run = as.factor(run)
+    # timepoint = ifelse(is.na(timepoint), 1, 2)
+    # ROI = case_when(
+    #   ROI %in% c("vv") ~ "vmpfc_v",
+    #   ROI %in% c("al","ar") ~ "amygdala",
+    #   ROI %in% c("hl","hr") ~ "hippocampus"
+    # )
+  ) %>%
+  select(subject, site, caps_b_t3, age, run, ROI, value, now_own_mean, STAR_ID)
 
-results_m1 <- data_long_runs %>%
+data_long_runs_T2only <- data_long_runs_T2only %>%
+  mutate(caps_b_t3 = as.numeric(caps_b_t3))
+
+results_m2_T2only <- data_long_runs_T2only %>%                               #####           T2 ONLY REPORTING VMPFC
   mutate(run = as.factor(run)) %>%
   group_split(ROI) %>%
-  set_names(unique(data_long_runs$ROI)) %>%
-  map(function(data_long_runs) {
-    cat("Running ROI:", unique(data_long_runs$ROI), "\n")
-    m1 <- try(
-      lmer(roi_signal ~ CAPSB + run + site + age + (1 | subject),
-           data = data_long_runs, REML = FALSE),
-      silent = TRUE
-    )
-    if (inherits(m1, "try-error")) {
-      cat("failed for:", unique(data_long_runs$ROI), "\n")
-      return(NULL)
-    }
-    cat("succeeded for:", unique(data_long_runs$ROI), "\n")
-    return(m1)
-  })
-#results_m1
-map(results_m1, summary)
-
-vif_results <- results_m1 %>%
-  compact() %>%  # remove NULLs if any
-  map(get_vif_lmer)
-
-#------------------------------------------------------------------------------
-# SIMPLEST INCLUDING INTERACTION W/CAPS BY RUN, no avoidance                          REPORTING THIS FOR VMPFC
-#      lmer(roi_signal ~ CAPSB * run + site + age + (1 | subject),
-
-results_m2 <- data_long_runs %>%
-  mutate(run = as.factor(run)) %>%
-  group_split(ROI) %>%
-  set_names(unique(data_long_runs$ROI)) %>%
-  map(function(data_long_runs) {
-    cat("Running ROI:", unique(data_long_runs$ROI), "\n")
+  set_names(unique(data_long_runs_T2only$ROI)) %>%
+  map(function(data_long_runs_T2only) {
+    cat("Running ROI:", unique(data_long_runs_T2only$ROI), "\n")
     m2 <- try(
-      lmer(roi_signal ~ CAPSB * run + site + age + (1 | subject),
-           data = data_long_runs, REML = FALSE),
+      lmer(value ~ caps_b_t3 * run + site + age + (1 | subject),
+           data = data_long_runs_T2only, REML = FALSE),
       silent = TRUE
     )
     if (inherits(m2, "try-error")) {
-      cat("failed for:", unique(data_long_runs$ROI), "\n")
+      cat("failed for:", unique(data_long_runs_T2only$ROI), "\n")
       return(NULL)
     }
-    cat("succeeded for:", unique(data_long_runs$ROI), "\n")
+    cat("succeeded for:", unique(data_long_runs_T2only$ROI), "\n")
     return(m2)
   })
 #results_m2
-map(results_m2, summary)
+map(results_m2_T2only, summary)
 
 # Extract fixed effects from all ROIs
-results_table <- map_dfr(results_m2, function(model) {
+results_table <- map_dfr(results_m2_T2only, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
 
 # Write to CSV
-write.csv(results_table, "results_m2.csv", row.names = FALSE)
+write.csv(results_table, "results_vmpfc_T2only.csv", row.names = FALSE)
+
+
+
+
+# Combine left/right hippocampus into one dataset with hemi variable
+hipp_data_T2only <- data_long_runs_T2only %>%
+  filter(ROI %in% c("hl", "hr")) %>%
+  mutate(
+    hemi = ifelse(ROI == "hl", "L", "R"),
+    run = as.factor(run)
+  )
+
+# Run the mixed model                                                                  T2 ONLY REPORTING THIS FOR HIPPOCAMPUS
+results_hipp_T2only <- hipp_data_T2only %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: hippocampus\n")
+    m1 <- try(
+      lmer(value ~ hemi + site + age + run * caps_b_t3 + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: h\n")
+      return(NULL)
+    }
+    cat("succeeded for: hippocampus\n")
+    return(m1)
+  }) %>%
+  set_names("hippocampus")
+map(results_hipp_T2only, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_hipp_T2only, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_hipp_T2only.csv", row.names = FALSE)
+
+# Run the mixed model                                                               NO CAPS CHECK FOR hippocampus
+results_hipp_T2only_nocaps <- list(
+  hippocampus = try(
+    lmer(value ~ hemi + site + age + run + (1 | subject),
+         data = hipp_data_T2only,
+         REML = FALSE),
+    silent = TRUE
+  )
+)
+map(results_hipp_T2only_nocaps, summary)
+
+# # Extract fixed effects from all ROIs
+results_table <- map_dfr(results_hipp_T2_nocaps, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_hipp_T2only_nocaps.csv", row.names = FALSE)
+
+
+# Combine left/right hippocampus into one dataset with hemi variable
+amygdala_data_T2only <- data_long_runs_T2only %>%
+  filter(ROI %in% c("al", "ar")) %>%
+  mutate(
+    hemi = ifelse(ROI == "al", "L", "R"),
+    run = as.factor(run)
+  )
+
+# Run the mixed model                                                                  T2 ONLY REPORTING THIS FOR AMYGDALA
+results_amyg_T2only <- amygdala_data_T2only %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "amygdala") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: amygs\n")
+    m1 <- try(
+      lmer(value ~ hemi + site + age + run * caps_b_t3 + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: amygs\n")
+      return(NULL)
+    }
+    cat("succeeded for: amygss\n")
+    return(m1)
+  }) %>%
+  set_names("amygdala")
+map(results_amyg_T2only, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_amyg_T2only, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_amyg_T2only.csv", row.names = FALSE)
+
+# Run the mixed model                                                               NO CAPS CHECK FOR AMYGDALA
+results_amygdala_T2only_nocaps <- list(
+  hippocampus = try(
+    lmer(value ~ hemi + site + age + run + (1 | subject),
+         data = amygdala_data_T2only,
+         REML = FALSE),
+    silent = TRUE
+  )
+)
+map(results_amygdala_T2only_nocaps, summary)
+
+
+# # Extract fixed effects from all ROIs
+results_table <- map_dfr(results_amygdala_T2only_nocaps, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_amygdala_T2only_nocaps.csv", row.names = FALSE)
+
 
 
 #------------------------------------------------------------------------------
