@@ -10,6 +10,7 @@ data_T2 <- read.csv("/Users/zefreeman/Documents/Prepost_ROIs_20251023.csv", head
 
 colnames(data_T2)[1] <- "subject"
 colnames(data_T2)[3] <- "site"
+colnames(data_T2)[5] <- "treatment_group"
 colnames(data_T2)[8] <- "age"
 colnames(data_T2)[9] <- "CAPSB"
 colnames(data_T2)[10] <- "run1vv"
@@ -73,6 +74,38 @@ colnames(data_T2)[168] <- "run1hr_T2"
 colnames(data_T2)[169] <- "run2hr_T2"
 colnames(data_T2)[170] <- "run3hr_T2"
 colnames(data_T2)[171] <- "hipp_r_total_T2"
+colnames(data_T2)[184] <- "run1hl_beta_own" # hippocampus left beta value to own cue in run 1
+colnames(data_T2)[185] <- "run2hl_beta_own"
+colnames(data_T2)[186] <- "run3hl_beta_own"
+colnames(data_T2)[187] <- "run1hl_beta_other" # hippocampus left beta value to other cue in run 1
+colnames(data_T2)[188] <- "run2hl_beta_other"
+colnames(data_T2)[189] <- "run3hl_beta_other"
+colnames(data_T2)[190] <- "run1hr_beta_own" # hippocampus right beta value to own cue in run 1
+colnames(data_T2)[191] <- "run2hr_beta_own"
+colnames(data_T2)[192] <- "run3hr_beta_own"
+colnames(data_T2)[193] <- "run1hr_beta_other" # hippocampus right beta value to other cue in run 1
+colnames(data_T2)[194] <- "run2hr_beta_other"
+colnames(data_T2)[195] <- "run3hr_beta_other"
+colnames(data_T2)[196] <- "run1whbr_beta_own" # whole brain beta value to own cue in run 1 at baseline
+colnames(data_T2)[197] <- "run2whbr_beta_own"
+colnames(data_T2)[198] <- "run3whbr_beta_own"
+colnames(data_T2)[199] <- "whbr_own_beta_total"
+colnames(data_T2)[200] <- "run1whbr_beta_own_T2" # whole brain beta value to own cue in run 1 at follow up
+colnames(data_T2)[201] <- "run2whbr_beta_own_T2"
+colnames(data_T2)[202] <- "run3whbr_beta_own_T2"
+colnames(data_T2)[203] <- "whbr_own_beta_total_T2"
+colnames(data_T2)[204] <- "run1hl_beta_own_T2"
+colnames(data_T2)[205] <- "run2hl_beta_own_T2"
+colnames(data_T2)[206] <- "run3hl_beta_own_T2"
+colnames(data_T2)[207] <- "run1hl_beta_other_T2"
+colnames(data_T2)[208] <- "run2hl_beta_other_T2"
+colnames(data_T2)[209] <- "run3hl_beta_other_T2"
+colnames(data_T2)[210] <- "run1hr_beta_own_T2"
+colnames(data_T2)[211] <- "run2hr_beta_own_T2"
+colnames(data_T2)[212] <- "run3hr_beta_own_T2"
+colnames(data_T2)[213] <- "run1hr_beta_other_T2"
+colnames(data_T2)[214] <- "run2hr_beta_other_T2"
+colnames(data_T2)[215] <- "run3hr_beta_other_T2"
 
 data_T2 <- data_T2 %>%
   mutate(
@@ -131,6 +164,7 @@ data_long_runs_T2 <- data_T2 %>%
   select(subject, site, CAPS.POST.PRE, caps_b_t3, age, run, ROI, value, now_own_mean, STAR_ID)
 
 
+# ------------------------------------------------------------
 # # wide to long for avoidance scores
 # data_long_avoid <- data %>%
 #   pivot_longer(
@@ -404,19 +438,21 @@ data_long_runs_T2only <- data_T2 %>%
     #   ROI %in% c("hl","hr") ~ "hippocampus"
     # )
   ) %>%
-  select(subject, site, caps_b_t3, age, run, ROI, value, now_own_mean, STAR_ID)
+  select(subject, site, caps_b_t3, age, run, ROI, value, treatment_group, CAPS.POST.PRE, STAR_ID)
 
 data_long_runs_T2only <- data_long_runs_T2only %>%
   mutate(caps_b_t3 = as.numeric(caps_b_t3))
 
-results_m2_T2only <- data_long_runs_T2only %>%                               #####           T2 ONLY REPORTING VMPFC
+data_long_runs_T2only_CBT <- subset(data_long_runs_T2only, treatment_group == "2")
+
+results_m2_T2only_group <- data_long_runs_T2only %>%                               #####           T2 ONLY REPORTING VMPFC
   mutate(run = as.factor(run)) %>%
   group_split(ROI) %>%
   set_names(unique(data_long_runs_T2only$ROI)) %>%
   map(function(data_long_runs_T2only) {
     cat("Running ROI:", unique(data_long_runs_T2only$ROI), "\n")
     m2 <- try(
-      lmer(value ~ caps_b_t3 * run + site + age + (1 | subject),
+      lmer(value ~ treatment_group * run + site + age + (1 | subject),
            data = data_long_runs_T2only, REML = FALSE),
       silent = TRUE
     )
@@ -428,17 +464,17 @@ results_m2_T2only <- data_long_runs_T2only %>%                               ###
     return(m2)
   })
 #results_m2
-map(results_m2_T2only, summary)
+map(results_m2_T2only_group, summary)
 
 # Extract fixed effects from all ROIs
-results_table <- map_dfr(results_m2_T2only, function(model) {
+results_table <- map_dfr(results_m2_T2only_group, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
 
 # Write to CSV
-write.csv(results_table, "results_vmpfc_T2only.csv", row.names = FALSE)
+write.csv(results_table, "results_vmpfc_T2only_group.csv", row.names = FALSE)
 
 
 
@@ -452,7 +488,44 @@ hipp_data_T2only <- data_long_runs_T2only %>%
   )
 
 # Run the mixed model                                                                  T2 ONLY REPORTING THIS FOR HIPPOCAMPUS
-results_hipp_T2only <- hipp_data_T2only %>%
+results_hipp_T2only_group <- hipp_data_T2only %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: hippocampus\n")
+    m1 <- try(
+      lmer(value ~ hemi + site + age + run * treatment_group + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: h\n")
+      return(NULL)
+    }
+    cat("succeeded for: hippocampus\n")
+    return(m1)
+  }) %>%
+  set_names("hippocampus")
+map(results_hipp_T2only_group, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_hipp_T2only_group, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_hipp_T2only_group.csv", row.names = FALSE)
+
+
+hipp_data_T2only <- hipp_data_T2only %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
+hipp_data_T2only_CBT <- subset(hipp_data_T2only, treatment_group == "2")
+
+# Run the mixed model                                                                  T2 ONLY REPORTING THIS FOR HIPPOCAMPUS
+results_hipp_T2only_CBT <- hipp_data_T2only_CBT %>%
   #mutate(run = as.numeric(run)) %>%
   group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
   map(function(df) {
@@ -470,17 +543,20 @@ results_hipp_T2only <- hipp_data_T2only %>%
     return(m1)
   }) %>%
   set_names("hippocampus")
-map(results_hipp_T2only, summary)
+map(results_hipp_T2only_CBT, summary)
 
 # Extract fixed effects from all ROIs
-results_table <- map_dfr(results_hipp_T2only, function(model) {
+results_table <- map_dfr(results_hipp_T2only_CBT, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
 
 # Write to CSV
-write.csv(results_table, "results_hipp_T2only.csv", row.names = FALSE)
+write.csv(results_table, "results_hipp_T2only_CBT.csv", row.names = FALSE)
+
+
+
 
 # Run the mixed model                                                               NO CAPS CHECK FOR hippocampus
 results_hipp_T2only_nocaps <- list(
@@ -513,7 +589,44 @@ amygdala_data_T2only <- data_long_runs_T2only %>%
   )
 
 # Run the mixed model                                                                  T2 ONLY REPORTING THIS FOR AMYGDALA
-results_amyg_T2only <- amygdala_data_T2only %>%
+results_amyg_T2only_group <- amygdala_data_T2only %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "amygdala") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: amygs\n")
+    m1 <- try(
+      lmer(value ~ hemi + site + age + run * treatment_group + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: amygs\n")
+      return(NULL)
+    }
+    cat("succeeded for: amygss\n")
+    return(m1)
+  }) %>%
+  set_names("amygdala")
+map(results_amyg_T2only_group, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_amyg_T2only_group, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_amyg_T2only_group.csv", row.names = FALSE)
+
+
+amygdala_data_T2only <- amygdala_data_T2only %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
+amygdala_data_T2only_CBT <- subset(amygdala_data_T2only, treatment_group == "2")
+
+# Run the mixed model                                                                  T2 ONLY REPORTING FOR AMYGDALA CBT
+results_amyg_T2only_CBT <- amygdala_data_T2only_CBT %>%
   #mutate(run = as.numeric(run)) %>%
   group_split(ROI_group = "amygdala") %>%  # just for structure, single group
   map(function(df) {
@@ -531,17 +644,18 @@ results_amyg_T2only <- amygdala_data_T2only %>%
     return(m1)
   }) %>%
   set_names("amygdala")
-map(results_amyg_T2only, summary)
+map(results_amyg_T2only_CBT, summary)
 
 # Extract fixed effects from all ROIs
-results_table <- map_dfr(results_amyg_T2only, function(model) {
+results_table <- map_dfr(results_amyg_T2only_CBT, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
 
 # Write to CSV
-write.csv(results_table, "results_amyg_T2only.csv", row.names = FALSE)
+write.csv(results_table, "results_amyg_T2only_CBT.csv", row.names = FALSE)
+
 
 # Run the mixed model                                                               NO CAPS CHECK FOR AMYGDALA
 results_amygdala_T2only_nocaps <- list(
@@ -567,134 +681,723 @@ write.csv(results_table, "results_amygdala_T2only_nocaps.csv", row.names = FALSE
 
 
 
-#------------------------------------------------------------------------------
-# plots of these
-#------------------------------------------------------------------------------
-#################################
-library(tidyverse)
-library(ggpubr)
+
+
+# does avoidance score explain variation in ROI signal?                       #####          CHANGING TO T1 AND T2
+# wide to long including T1 and T2
+data_long_runs_T1and2 <- data_T2 %>%
+  pivot_longer(
+    cols = c(
+      run1vv, run2vv, run3vv,
+      run1al, run2al, run3al,
+      run1ar, run2ar, run3ar,
+      run1hl, run2hl, run3hl,
+      run1hr, run2hr, run3hr,
+      run1vv_T2, run2vv_T2, run3vv_T2,
+      run1al_T2, run2al_T2, run3al_T2,
+      run1ar_T2, run2ar_T2, run3ar_T2,
+      run1hl_T2, run2hl_T2, run3hl_T2,
+      run1hr_T2, run2hr_T2, run3hr_T2
+    ),
+    names_to = c("run", "ROI", "tp"),
+    names_pattern = "run([0-9]+)([a-zA-Z]+)(_T2)?",
+    values_to = "value"
+  ) %>%
+  mutate(
+    run = as.factor(run),
+    timepoint = ifelse(tp == "_T2", 2L, 1L)
+  ) %>%
+  select(subject, site, CAPSB, caps_b_t3, CAPS.POST.PRE, treatment_group, age,
+         run, ROI, timepoint, value, STAR_ID)
+
+View(data_long_runs_T1and2)
+write.csv(data_long_runs_T1and2,
+          file = "data_long_runs_T1and2.csv",
+          row.names = FALSE)
+
+data_long_runs_T1and2 <- data_long_runs_T1and2 %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
+results_m2_T1and2 <- data_long_runs_T1and2 %>%                               #####           T1 and 2 REPORTING VMPFC
+  mutate(run = as.factor(run)) %>%
+  group_split(ROI) %>%
+  set_names(unique(data_long_runs_T1and2$ROI)) %>%
+  map(function(data_long_runs_T1and2) {
+    cat("Running ROI:", unique(data_long_runs_T1and2$ROI), "\n")
+    m2 <- try(
+      lmer(value ~ timepoint * treatment_group * run + site + age + (1 | subject),
+           data = data_long_runs_T1and2, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m2, "try-error")) {
+      cat("failed for:", unique(data_long_runs_T1and2$ROI), "\n")
+      return(NULL)
+    }
+    cat("succeeded for:", unique(data_long_runs_T1and2$ROI), "\n")
+    return(m2)
+  })
+#results_m2
+map(results_m2_T1and2, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_m2_T1and2, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_vmpfc-and-unilat_T1and2int.csv", row.names = FALSE)
+
+
+CBTvmpfcT1and2 <- subset(data_long_runs_T1and2, treatment_group == "2")
+CBTvmpfcT1and2 <- subset(CBTvmpfcT1and2, ROI == "vv")
+results_m2_T1and2_CBT <- CBTvmpfcT1and2 %>%                               #####           T1 and 2 REPORTING VMPFC CBT
+  mutate(run = as.factor(run)) %>%
+  group_split(ROI) %>%
+  set_names(unique(CBTvmpfcT1and2$ROI)) %>%
+  map(function(CBTvmpfcT1and2) {
+    cat("Running ROI:", unique(CBTvmpfcT1and2$ROI), "\n")
+    results_m2_T1and2_CBT <- try(
+      lmer(value ~ timepoint * run + site + age + (1 | subject),
+           data = CBTvmpfcT1and2, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(results_m2_T1and2_CBT, "try-error")) {
+      cat("failed for:", unique(CBTvmpfcT1and2$ROI), "\n")
+      return(NULL)
+    }
+    cat("succeeded for:", unique(CBTvmpfcT1and2$ROI), "\n")
+    return(results_m2_T1and2_CBT)
+  })
+#results_m2
+map(results_m2_T1and2_CBT, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_m2_T1and2_CBT, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_vmpfc-and-unilat_T1and2_CBT.csv", row.names = FALSE)
+
+
+m1_vv_CBT <- results_m2_T1and2_CBT$vv
+# Then run emmeans
+vv_emm <- emmeans(m1_vv_CBT, ~ timepoint * run * site)
+# Convert to dataframe for plotting
+vv_plot_data <- as.data.frame(vv_emm)
+
+# 4️⃣ Plot (same visual style as hippocampus/vv)
+vv_plot <- ggplot(vv_plot_data, aes(x = run, y = emmean, fill = site)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(
+    aes(ymin = emmean - SE, ymax = emmean + SE),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ timepoint) +  # facet by timepoint (e.g., pre vs post)
+  coord_cartesian(ylim = c(-1.25, 1)) +
+  theme_minimal(base_size = 8) +
+  labs(
+    title = "vmPFC (CBT Group): Predicted ROI Own Cue > Other Cue Signal by Run, Site, and Timepoint",
+    x = "Run",
+    y = "Estimated marginal means (± SEM)",
+    fill = "Site"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top",
+    panel.grid.major.x = element_blank()
+  )
+
+ggsave("vmPFC_CBT_run_site_timepoint.png", vv_plot, width = 7, height = 4, dpi = 300)
+
+
+
+TAUvmpfcT1and2 <- subset(data_long_runs_T1and2, timepoint == "1")
+TAUvmpfcT1and2 <- subset(TAUvmpfcT1and2, ROI == "vv")
+#TAUvmpfcT1and2 <- subset(data_long_runs_T1and2, treatment_group == "1")
+
+results_m2_T1and2_TAU <- TAUvmpfcT1and2 %>%                               #####           T2 ONLY REPORTING VMPFC CBT
+  mutate(run = as.factor(run)) %>%
+  group_split(ROI) %>%
+  set_names(unique(TAUvmpfcT1and2$ROI)) %>%
+  map(function(TAUvmpfcT1and2) {
+    cat("Running ROI:", unique(TAUvmpfcT1and2$ROI), "\n")
+    results_m2_T1and2_TAU <- try(
+      lmer(value ~ timepoint * run + site + age + (1 | subject),
+           data = TAUvmpfcT1and2, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(results_m2_T1and2_TAU, "try-error")) {
+      cat("failed for:", unique(TAUvmpfcT1and2$ROI), "\n")
+      return(NULL)
+    }
+    cat("succeeded for:", unique(TAUvmpfcT1and2$ROI), "\n")
+    return(results_m2_T1and2_TAU)
+  })
+#results_m2
+map(results_m2_T1and2_TAU, summary)
+
+m1_vv_TAU <- results_m2_T1and2_TAU$vv
+# Then run emmeans
+vv_emm_TAU <- emmeans(m1_vv_TAU, ~ timepoint * run * site)
+# Convert to dataframe for plotting
+vv_plot_data_TAU <- as.data.frame(vv_emm_TAU)
+
+# 4️⃣ Plot (same visual style as hippocampus/vv)
+vv_plot <- ggplot(vv_plot_data_TAU, aes(x = run, y = emmean, fill = site)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(
+    aes(ymin = emmean - SE, ymax = emmean + SE),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ timepoint) +  # facet by timepoint (e.g., pre vs post)
+  coord_cartesian(ylim = c(-0.75, 0.5)) +
+  theme_minimal(base_size = 8) +
+  labs(
+    title = "vmPFC (TAU Group): Predicted ROI Own Cue > Other Cue Signal by Run, Site, and Timepoint",
+    x = "Run",
+    y = "Estimated marginal means (± SEM)",
+    fill = "Site"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top",
+    panel.grid.major.x = element_blank()
+  )
+
+ggsave("vmPFC_TAU_run_site_timepoint.png", vv_plot, width = 7, height = 4, dpi = 300)
+
+
+
+vmpfcT1_T2script <- subset(data_long_runs_T1and2, timepoint == "1")
+vmpfcT1_T2script <- subset(vmpfcT1_T2script, ROI == "vv")
+
+results_m2_T1 <- vmpfcT1_T2script %>%                               #####           T1 ONLY REplicating
+  mutate(run = as.factor(run)) %>%
+  group_split(ROI) %>%
+  set_names(unique(vmpfcT1_T2script$ROI)) %>%
+  map(function(vmpfcT1_T2script) {
+    cat("Running ROI:", unique(vmpfcT1_T2script$ROI), "\n")
+    results_m2_T1 <- try(
+      lmer(value ~ run + site + age + (1 | subject),
+           data = vmpfcT1_T2script, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(results_m2_T1, "try-error")) {
+      cat("failed for:", unique(vmpfcT1_T2script$ROI), "\n")
+      return(NULL)
+    }
+    cat("succeeded for:", unique(vmpfcT1_T2script$ROI), "\n")
+    return(results_m2_T1)
+  })
+#results_m2
+map(results_m2_T1, summary)
+
+m1_vv_T1 <- results_m2_T1$vv                                #                  REPLICATING m1_vv IN SCRIPT 1
+# Then run emmeans
+vv_emm_T1 <- emmeans(m1_vv_T1, ~ run * site)
+# Convert to dataframe for plotting
+vv_plot_data_T1 <- as.data.frame(vv_emm_T1)
+
+# 4️⃣ Plot (same visual style as hippocampus/vv)
+vv_plot <- ggplot(vv_plot_data_T1, aes(x = run, y = emmean, fill = site)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(
+    aes(ymin = emmean - SE, ymax = emmean + SE),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  #facet_wrap(~ timepoint) +  # facet by timepoint (e.g., pre vs post)
+  coord_cartesian(ylim = c(-1.0, 1.5)) +
+  theme_minimal(base_size = 8) +
+  labs(
+    title = "vmPFC (T1): Predicted ROI Own Cue > Other Cue Signal by Run, Site",
+    x = "Run",
+    y = "Estimated marginal means (± SEM)",
+    fill = "Site"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top",
+    panel.grid.major.x = element_blank()
+  )
+
+ggsave("vmPFC_T1_run_site.png", vv_plot, width = 7, height = 4, dpi = 300)
+
+
+CBTvmpfcT2 <- subset(CBTvmpfcT1and2, timepoint == "2")
+
+results_m2_T2_CBT <- CBTvmpfcT2 %>%                               #####           T2 ONLY REPORTING VMPFC CBT
+  mutate(run = as.factor(run)) %>%
+  group_split(ROI) %>%
+  set_names(unique(CBTvmpfcT2$ROI)) %>%
+  map(function(CBTvmpfcT2) {
+    cat("Running ROI:", unique(CBTvmpfcT2$ROI), "\n")
+    m2 <- try(
+      lmer(value ~ run * CAPS.POST.PRE + site + age + (1 | subject),
+           data = CBTvmpfcT2, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m2, "try-error")) {
+      cat("failed for:", unique(CBTvmpfcT2$ROI), "\n")
+      return(NULL)
+    }
+    cat("succeeded for:", unique(CBTvmpfcT2$ROI), "\n")
+    return(m2)
+  })
+#results_m2
+map(results_m2_T2_CBT, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_m2_T2_CBT, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_vmpfc-and-unilat_T2_CBT.csv", row.names = FALSE)
+
+
+
+# Combine left/right into one dataset with hemi variable
+amygdala_data_T1and2 <- data_long_runs_T1and2 %>%
+  filter(ROI %in% c("al", "ar")) %>%
+  mutate(
+    hemi = ifelse(ROI == "al", "L", "R"),
+    run = as.factor(run)
+  )
+# Run the mixed model                                                                  T1 and T2 REPORTING THIS FOR AMYGDALA
+results_amyg_T1and2 <- amygdala_data_T1and2 %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "amygdala") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: amygs\n")
+    m1 <- try(
+      lmer(value ~ hemi + timepoint * treatment_group + run + site + age + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: amygs\n")
+      return(NULL)
+    }
+    cat("succeeded for: amygss\n")
+    return(m1)
+  }) %>%
+  set_names("amygdala")
+map(results_amyg_T1and2, summary)
+
+# Run the mixed model                                                                  T1 and T2 REPORTING THIS FOR AMYGDALA
+results_amyg_T1and2 <- amygdala_data_T1and2 %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "amygdala") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: amygs\n")
+    m1 <- try(
+      lmer(value ~ hemi + timepoint * treatment_group * run + site + age + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: amygs\n")
+      return(NULL)
+    }
+    cat("succeeded for: amygss\n")
+    return(m1)
+  }) %>%
+  set_names("amygdala")
+map(results_amyg_T1and2, summary)
+
+CBTamygT1and2 <- subset(amygdala_data_T1and2, treatment_group == "2")
+
+results_amyg_T1and2_CBT <- CBTamygT1and2 %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "amygdala") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: amygs\n")
+    m1 <- try(
+      lmer(value ~ hemi + timepoint * run + site + age + (1 | subject),
+      #lmer(value ~ hemi + timepoint + CAPS.POST.PRE * run + site + age + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: amygs\n")
+      return(NULL)
+    }
+    cat("succeeded for: amygss\n")
+    return(m1)
+  }) %>%
+  set_names("amygdala")
+map(results_amyg_T1and2_CBT, summary)
+
+
+m1_amyg_CBT <- results_amyg_T1and2_CBT$amygdala
+# Then run emmeans
+amyg_emm <- emmeans(m1_amyg_CBT, ~ timepoint * run * site)
+# Convert to dataframe for plotting
+amyg_plot_data <- as.data.frame(amyg_emm)
+
+# 4️⃣ Plot (same visual style as hippocampus/vv)
+amyg_plot <- ggplot(amyg_plot_data, aes(x = run, y = emmean, fill = site)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(
+    aes(ymin = emmean - SE, ymax = emmean + SE),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ timepoint) +  # facet by timepoint (e.g., pre vs post)
+  coord_cartesian(ylim = c(-0.75, 1.5)) +
+  theme_minimal(base_size = 8) +
+  labs(
+    title = "Amygdala (CBT Group): Predicted ROI Own Cue > Other Cue Signal by Run, Site, and Timepoint",
+    x = "Run",
+    y = "Estimated marginal means (± SEM)",
+    fill = "Site"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top",
+    panel.grid.major.x = element_blank()
+  )
+
+# 5️⃣ Save the plot
+ggsave("amygdala_CBT_run_site_timepoint.png", amyg_plot, width = 7, height = 4, dpi = 300)
+
+
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_amyg_T1and2_CBT, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_amyg_T1and2_CBT.csv", row.names = FALSE)
+
+# Combine left/right hippocampus into one dataset with hemi variable
+hipp_data_T1and2 <- data_long_runs_T1and2 %>%
+  filter(ROI %in% c("hl", "hr")) %>%
+  mutate(
+    hemi = ifelse(ROI == "hl", "L", "R"),
+    run = as.factor(run)
+  )
+
+# Run the mixed model                                                                  T1 and T2 REPORTING THIS FOR HIPPOCAMPUS
+results_hipp_T1and2 <- hipp_data_T1and2 %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: hippocampus\n")
+    m1 <- try(
+      lmer(value ~ hemi + timepoint * treatment_group + run + site + age + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: h\n")
+      return(NULL)
+    }
+    cat("succeeded for: hippocampus\n")
+    return(m1)
+  }) %>%
+  set_names("hippocampus")
+map(results_hipp_T1and2, summary)
+
+
+CBThippT1and2 <- subset(hipp_data_T1and2, treatment_group == "2")
+
+results_hipp_T1and2_CBT <- CBThippT1and2 %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: hippocampus\n")
+    m1 <- try(
+      lmer(value ~ hemi + timepoint * run + site + age + (1 | subject),
+      #lmer(value ~ hemi + timepoint * treatment_group * run + site + age + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: h\n")
+      return(NULL)
+    }
+    cat("succeeded for: hippocampus\n")
+    return(m1)
+  }) %>%
+  set_names("hippocampus")
+map(results_hipp_T1and2_CBT, summary)
+
+
+m1_hipp_CBT <- results_hipp_T1and2_CBT$hippocampus
+# Then run emmeans
+hipp_emm <- emmeans(m1_hipp_CBT, ~ timepoint * run * site)
+# Convert to dataframe for plotting
+hipp_plot_data <- as.data.frame(hipp_emm)
+
+hipp_plot <- ggplot(hipp_plot_data, aes(x = run, y = emmean, fill = site)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(
+    aes(ymin = emmean - SE, ymax = emmean + SE),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ timepoint) +  # facet by timepoint (e.g., pre vs post)
+  coord_cartesian(ylim = c(-0.25, 1.25)) +
+  theme_minimal(base_size = 8) +
+  labs(
+    title = "Hippocampus (CBT Group): Predicted ROI Own Cue > Other Cue Signal by Run, Site, and Timepoint",
+    x = "Run",
+    y = "Estimated marginal means (± SEM)",
+    fill = "Site"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top",
+    panel.grid.major.x = element_blank()
+  )
+
+ggsave("hippocampus_CBT_run_site_timepoint.png", hipp_plot, width = 7, height = 4, dpi = 300)
+
+
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_hipp_T1and2_CBT, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_hipp_T1and2_CBT.csv", row.names = FALSE)
+
+
+
+#-----------------------------------------------------------------------------
+# USING BETAS TO DO STATISTICS ON THE WHOLE BRAIN ACTIVITY AS WELL AS ROI
+#-----------------------------------------------------------------------------
+
+library(dplyr)
+library(tidyr)
 library(lme4)
-library(broom.mixed)
-# ---------------------------
-# Extract fitted values from results_m2
-# ---------------------------
 
-# For each ROI, add fitted values as a column to the original data
-data_fitted <- imap_dfr(results_m2, function(model, roi_name) {
-  if (!is.null(model)) {
-    data_tmp <- model@frame
-    data_tmp$fitted <- predict(model)
-    data_tmp$ROI <- roi_name
-    return(data_tmp)
-  } else {
-    return(NULL)
-  }
-})
+
+cols_to_gather <- c(
+  # Hippocampus left/right T1
+  "run1hl_beta_own","run2hl_beta_own","run3hl_beta_own",
+  "run1hl_beta_other","run2hl_beta_other","run3hl_beta_other",
+  "run1hr_beta_own","run2hr_beta_own","run3hr_beta_own",
+  "run1hr_beta_other","run2hr_beta_other","run3hr_beta_other",
+  # Wholebrain T1
+  "run1whbr_beta_own","run2whbr_beta_own","run3whbr_beta_own",
+  # Hippocampus and wholebrain T2
+  "run1hl_beta_own_T2","run2hl_beta_own_T2","run3hl_beta_own_T2",
+  "run1hl_beta_other_T2","run2hl_beta_other_T2","run3hl_beta_other_T2",
+  "run1hr_beta_own_T2","run2hr_beta_own_T2","run3hr_beta_own_T2",
+  "run1hr_beta_other_T2","run2hr_beta_other_T2","run3hr_beta_other_T2",
+  "run1whbr_beta_own_T2","run2whbr_beta_own_T2","run3whbr_beta_own_T2"
+)
+
+
+data_long_T1T2_betas <- data_T2 %>%
+  pivot_longer(
+    cols = all_of(cols_to_gather),
+    names_to = c("run","ROI","condition","tp"),
+    names_pattern = "run([123])([a-z]+)_beta_(own|other)(_T2)?",
+    values_to = "value"
+  ) %>%
+  mutate(
+    run = factor(run, levels = c("1","2","3")),
+    condition = factor(condition, levels = c("own","other")),
+    timepoint = ifelse(tp=="_T2", 2L, 1L),
+    hemi = case_when(
+      ROI %in% c("hl","hr") ~ ifelse(ROI=="hl","L","R"),
+      TRUE ~ NA_character_
+    ),
+    ROI = case_when(
+      ROI %in% c("hl","hr") ~ "hippocampus",
+      ROI %in% c("whbr") ~ "wholebrain",
+      TRUE ~ ROI
+    )
+  ) %>%
+  select(subject, site, CAPS.POST.PRE, caps_b_t3, age,
+         run, ROI, hemi, condition, timepoint, treatment_group, value, STAR_ID)
+
+
+hippo_long <- data_long_T1T2_betas %>%
+  filter(ROI == "hippocampus", hemi %in% c("L","R"))
+hippo_long <- hippo_long %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
 
 library(tidyverse)
 
-# ---------------------------
-# 1. Bar plots by Site, Hemi, Run
-# ---------------------------
-# Site
-plot_site <- data_fitted %>%
-  group_by(site) %>%
-  summarise(meanF = mean(fitted, na.rm = TRUE),
-            semF  = sem(fitted)) %>%
-  ggplot(aes(x = site, y = meanF)) +
-  geom_col(fill = "skyblue") +
-  geom_errorbar(aes(ymin = meanF - semF, ymax = meanF + semF), width = 0.2) +
-  ylab("Fitted ROI signal") + xlab("Site") + theme_minimal()
-ggsave("plot_site.png", plot_site, width = 6, height = 4, dpi = 300)
+# filter hippocampus data set factors
+hipp_data <- hippo_long %>%
+  filter(ROI == "hippocampus") %>%
+  mutate(
+    run = as.factor(run),
+    condition = as.factor(condition),
+    hemi = as.factor(hemi),
+    subject = as.factor(subject)
+  )
 
-# Hemi
-plot_hemi <- data_fitted %>%
-  group_by(hemi) %>%
-  summarise(meanF = mean(fitted, na.rm = TRUE),
-            semF  = sem(fitted)) %>%
-  ggplot(aes(x = hemi, y = meanF)) +
-  geom_col(fill = "salmon") +
-  geom_errorbar(aes(ymin = meanF - semF, ymax = meanF + semF), width = 0.2) +
-  ylab("Fitted ROI signal") + xlab("Hemisphere") + theme_minimal()
-ggsave("plot_hemi.png", plot_hemi, width = 6, height = 4, dpi = 300)
+hipp_data <- subset(hipp_data, timepoint == "2")
 
-# Run
-plot_run <- data_fitted %>%
-  group_by(run) %>%
-  summarise(meanF = mean(fitted, na.rm = TRUE),
-            semF  = sem(fitted)) %>%
-  ggplot(aes(x = run, y = meanF)) +
-  geom_col(fill = "lightgreen") +
-  geom_errorbar(aes(ymin = meanF - semF, ymax = meanF + semF), width = 0.2) +
-  ylab("Fitted ROI signal") + xlab("Run") + theme_minimal()
-ggsave("plot_run.png", plot_run, width = 6, height = 4, dpi = 300)
-
-# ---------------------------
-# 2. Scatter plots: CAPSB and Avoidance
-# ---------------------------
-# CAPSB overall
-plot_CAPSB <- ggplot(data_fitted, aes(x = CAPSB, y = fitted)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = TRUE, color = "blue") +
-  xlab("zCAPSB") + ylab("Fitted ROI signal") + theme_minimal()
-ggsave("scatter_CAPSB.png", plot_CAPSB, width = 6, height = 4, dpi = 300)
-
-# CAPSB by Site
-plot_CAPSB_site <- ggplot(data_fitted, aes(x = CAPSB, y = fitted, color = site)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  xlab("zCAPSB") + ylab("Fitted ROI signal") + theme_minimal()
-ggsave("scatter_CAPSB_by_site.png", plot_CAPSB_site, width = 6, height = 4, dpi = 300)
-
-# CAPSB by Run
-plot_CAPSB_run <- ggplot(data_fitted, aes(x = CAPSB, y = fitted, color = run)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  xlab("zCAPSB") + ylab("Fitted ROI signal") + theme_minimal()
-ggsave("scatter_CAPSB_by_run.png", plot_CAPSB_run, width = 6, height = 4, dpi = 300)
-
-# Avoidance overall
-plot_avoid <- ggplot(data_fitted, aes(x = avoid_score, y = fitted)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = TRUE, color = "darkgreen") +
-  xlab("zblockAvoidance") + ylab("Fitted ROI signal") + theme_minimal()
-ggsave("scatter_avoidance.png", plot_avoid, width = 6, height = 4, dpi = 300)
-
-# Avoidance by Site
-plot_avoid_site <- ggplot(data_fitted, aes(x = avoidance, y = fitted, color = site)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  xlab("zblockAvoidance") + ylab("Fitted ROI signal") + theme_minimal()
-ggsave("scatter_avoidance_by_site.png", plot_avoid_site, width = 6, height = 4, dpi = 300)
-
-# Avoidance by Run
-plot_avoid_run <- ggplot(data_fitted, aes(x = avoid_score, y = fitted, color = run)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  xlab("zblockAvoidance") + ylab("Fitted ROI signal") + theme_minimal()
-ggsave("scatter_avoidance_by_run.png", plot_avoid_run, width = 6, height = 4, dpi = 300)
-
-# ---------------------------
-# 3. Grouped bar plot: Run × Site
-# ---------------------------
-run_site_summary <- data_fitted %>%
-  group_by(run, site) %>%
-  summarise(meanF = mean(fitted, na.rm = TRUE),
-            semF  = sem(fitted)) %>%
+# compute mean ± SEM per run × condition × hemi
+hipp_summary <- hipp_data %>%
+  group_by(run, condition, hemi) %>%
+  summarise(
+    mean_signal = mean(value, na.rm = TRUE),
+    sem = sd(value, na.rm = TRUE) / sqrt(n())
+  ) %>%
   ungroup()
 
-plot_run_site <- ggplot(run_site_summary, aes(x = run, y = meanF, fill = site)) +
-  geom_col(position = position_dodge(width = 0.8)) +
-  geom_errorbar(aes(ymin = meanF - semF, ymax = meanF + semF),
-                position = position_dodge(width = 0.8), width = 0.2) +
-  ylab("Fitted ROI signal (mean ± SEM)") + xlab("Run") +
-  theme_minimal()
-ggsave("bar_Run_by_Site.png", plot_run_site, width = 6, height = 4, dpi = 300)
+# plot grp means
+hipp_plot <- ggplot(hipp_summary, aes(x = run, y = mean_signal, fill = condition)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_errorbar(
+    aes(ymin = mean_signal - sem, ymax = mean_signal + sem),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ hemi) +
+  coord_cartesian(ylim = c(-0.5, 0.75)) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Hippocampus: Mean Beta Values by Run and Condition",
+    x = "Run",
+    y = "Mean estimated activation (± SEM)",
+    fill = "Condition"
+  ) +
+  theme(
+    legend.position = "top",
+    panel.grid.major.x = element_blank()
+  )
 
-###########
+# 4️⃣ Save the plot
+ggsave("T2_hippocampus_run_condition_raw.png", hipp_plot, width = 6, height = 4, dpi = 300)
 
 
-#------------------------------------------------------------------------------           REPORTING TRIAL BY TRIAL NOWNESS
+hippo_long_CBT <- subset(hippo_long, treatment_group == "2")
+
+hippo_long_TAU <- subset(hippo_long, treatment_group == "1")
+
+hipp_betas<- lmer(
+  value ~ hemi + condition + CAPS.POST.PRE + run * timepoint + treatment_group +age + site + (1 | subject),
+  data = hippo_long
+)
+summary(hipp_betas)
+
+results_table <- broom.mixed::tidy(hipp_betas) %>%
+  select(term, estimate, std.error, df, statistic, p.value)
+
+write.csv(results_table, "results_hipp_beta_T1and2.csv", row.names = FALSE)
+
+
+library(dplyr)
+
+# Create a separate dataset for wholebrain
+wb_long <- data_long_T1T2_betas %>%
+  filter(ROI == "wholebrain") %>%
+  group_by(subject, site, CAPS.POST.PRE, caps_b_t3, age, condition, timepoint, treatment_group, STAR_ID) %>%
+  summarise(
+    value = mean(value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    ROI = "wholebrain",
+    hemi = NA  # or "WB" if you prefer
+  ) 
+  
+
+wb_long <- wb_long %>%
+  mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
+
+model_betas_whbr <- lmer(
+  value ~ timepoint * CAPS.POST.PRE + site + age + (1 | subject),
+  data = wb_long
+)
+summary(model_betas_whbr)
+
+
+results_table <- broom.mixed::tidy(model_betas_whbr) %>%
+  select(term, estimate, std.error, df, statistic, p.value)
+
+write.csv(results_table, "2_results_whbr_beta_T1and2.csv", row.names = FALSE)
+
+
+wb_long_TAU <- subset(wb_long, treatment_group == "1")
+
+model_betas_whbr_CBT <- lmer(
+  value ~ timepoint * CAPS.POST.PRE + site + age + (1 | subject),
+  data = wb_long_CBT
+)
+summary(model_betas_whbr_CBT)
+
+
+results_table <- broom.mixed::tidy(model_betas_whbr_TAU) %>%
+  select(term, estimate, std.error, df, statistic, p.value)
+
+write.csv(results_table, "results_whbr_beta_T1and2_TAU.csv", row.names = FALSE)
+
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(models_betas_whbr, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_whbr_T1and2_CBT.csv", row.names = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#------------------------------------------------------------------------------           T1 REPORTING TRIAL BY TRIAL NOWNESS
 # nowness by trial for vmpfc
 
 trial_data <- read.csv("/Users/zefreeman/Documents/T1_nowness_ratings.csv", header = TRUE, stringsAsFactors = FALSE)
@@ -722,10 +1425,18 @@ trial_data_vv <- trial_data_vv %>%
     run = as.factor(Run),
     site = as.factor(site)
   )
-
+model_trial_ratingbyrun <-lmer(vv_value ~ Rating * run + CAPSB + Trial + site + age + (1 | subject),
+                             data = trial_data_vv)
+summary(model_trial_ratingbyrun)
 model_trial <- lmer(vv_value ~ CAPSB + Rating + run + Trial + site + age + (1 | subject),
                     data = trial_data_vv)
 summary(model_trial)
+
+results_table <- tidy(model_trial_ratingbyrun) %>%
+  select(term, estimate, std.error, df, statistic, p.value)
+
+# Write to CSV
+write.csv(results_table, "results_vmpfc_runbynowness.csv", row.names = FALSE)
 
 model_data <- model.frame(model_trial)
 model_data$Run <- trial_data_vv$Run[as.numeric(rownames(model_data))]
@@ -779,6 +1490,17 @@ trial_data_arl_long <- trial_data_arl %>%
     run = as.factor(Run),
     site = as.factor(site)
   )
+model_arl_ratingbyrun <- lmer(
+amyg_value ~ Rating * run + CAPSB + Trial + site + age + Hemisphere + (1 | subject),
+  data = trial_data_arl_long
+)
+summary(model_arl_ratingbyrun)
+
+results_table <- tidy(model_arl_ratingbyrun) %>%
+  select(term, estimate, std.error, df, statistic, p.value)
+
+# Write to CSV
+write.csv(results_table, "results_amygdala_runbynowness.csv", row.names = FALSE)
 
 model_arl <- lmer(
   amyg_value ~ CAPSB + Rating + run + Trial + site + age + Hemisphere + (1 | subject),
