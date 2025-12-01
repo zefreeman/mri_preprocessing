@@ -8,48 +8,64 @@ library(purrr)
 
 data <- read.csv("/Users/zefreeman/Documents/All_ROIs_20251017.csv", header = TRUE, stringsAsFactors = FALSE)
 
-colnames(data)[1] <- "subject"
-colnames(data)[3] <- "site"
-colnames(data)[8] <- "age"
-colnames(data)[9] <- "CAPSB"
-colnames(data)[10] <- "run1vv"
-colnames(data)[11] <- "run2vv"
-colnames(data)[12] <- "run3vv"
-colnames(data)[13] <- "vmpfc_v_total"
-colnames(data)[22] <- "run1vd" # not using
-colnames(data)[23] <- "run2vd" # not using
-colnames(data)[24] <- "run3vd" # not using
-colnames(data)[25] <- "vmpfc_d_total" # not using
-colnames(data)[34] <- "run1al"
-colnames(data)[35] <- "run2al"
-colnames(data)[36] <- "run3al"
-colnames(data)[37] <- "amyg_l_total"
-colnames(data)[46] <- "run1ar"
-colnames(data)[47] <- "run2ar"
-colnames(data)[48] <- "run3ar"
-colnames(data)[49] <- "amyg_r_total"
-colnames(data)[58] <- "run1hl"
-colnames(data)[59] <- "run2hl"
-colnames(data)[60] <- "run3hl"
-colnames(data)[61] <- "hipp_l_total"
-colnames(data)[70] <- "run1hr"
-colnames(data)[71] <- "run2hr"
-colnames(data)[72] <- "run3hr"
-colnames(data)[73] <- "hipp_r_total"
-colnames(data)[90] <- "avo_1"
-colnames(data)[91] <- "diss_1"
-colnames(data)[92] <- "anx_1"
-colnames(data)[93] <- "avo_2"
-colnames(data)[94] <- "diss_2"
-colnames(data)[95] <- "anx_2"
-colnames(data)[96] <- "avo_3"
-colnames(data)[97] <- "diss_3"
-colnames(data)[98] <- "anx_3"
-colnames(data)[101] <- "now_own_1"
-colnames(data)[102] <- "now_own_2"
-colnames(data)[103] <- "now_own_3"
-colnames(data)[104] <- "now_own_mean" # mean own memory nownness score across runs
-colnames(data)[105] <- "STAR_ID"
+newnames <- c(
+  "subject" = 1, "site" = 3, "age" = 8, "CAPSB" = 9,
+  "run1vv" = 10, "run2vv" = 11, "run3vv" = 12, "vmpfc_v_total" = 13,
+  "run1vd" = 22, "run2vd" = 23, "run3vd" = 24, "vmpfc_d_total" = 25,
+  "run1al" = 34, "run2al" = 35, "run3al" = 36, "amyg_l_total" = 37,
+  "run1ar" = 46, "run2ar" = 47, "run3ar" = 48, "amyg_r_total" = 49,
+  "run1hl" = 58, "run2hl" = 59, "run3hl" = 60, "hipp_l_total" = 61,
+  "run1hr" = 70, "run2hr" = 71, "run3hr" = 72, "hipp_r_total" = 73,
+  "avo_1" = 90, "diss_1" = 91, "anx_1" = 92,
+  "avo_2" = 93, "diss_2" = 94, "anx_2" = 95,
+  "avo_3" = 96, "diss_3" = 97, "anx_3" = 98,
+  "now_own_1" = 101, "now_own_2" = 102, "now_own_3" = 103,
+  "now_own_mean" = 104, "STAR_ID" = 105
+)
+names(data)[newnames] <- names(newnames)
+
+# colnames(data)[1] <- "subject"
+# colnames(data)[3] <- "site"
+# colnames(data)[8] <- "age"
+# colnames(data)[9] <- "CAPSB"
+# colnames(data)[10] <- "run1vv"
+# colnames(data)[11] <- "run2vv"
+# colnames(data)[12] <- "run3vv"
+# colnames(data)[13] <- "vmpfc_v_total"
+# colnames(data)[22] <- "run1vd" # not using
+# colnames(data)[23] <- "run2vd" # not using
+# colnames(data)[24] <- "run3vd" # not using
+# colnames(data)[25] <- "vmpfc_d_total" # not using
+# colnames(data)[34] <- "run1al"
+# colnames(data)[35] <- "run2al"
+# colnames(data)[36] <- "run3al"
+# colnames(data)[37] <- "amyg_l_total"
+# colnames(data)[46] <- "run1ar"
+# colnames(data)[47] <- "run2ar"
+# colnames(data)[48] <- "run3ar"
+# colnames(data)[49] <- "amyg_r_total"
+# colnames(data)[58] <- "run1hl"
+# colnames(data)[59] <- "run2hl"
+# colnames(data)[60] <- "run3hl"
+# colnames(data)[61] <- "hipp_l_total"
+# colnames(data)[70] <- "run1hr"
+# colnames(data)[71] <- "run2hr"
+# colnames(data)[72] <- "run3hr"
+# colnames(data)[73] <- "hipp_r_total"
+# colnames(data)[90] <- "avo_1"
+# colnames(data)[91] <- "diss_1"
+# colnames(data)[92] <- "anx_1"
+# colnames(data)[93] <- "avo_2"
+# colnames(data)[94] <- "diss_2"
+# colnames(data)[95] <- "anx_2"
+# colnames(data)[96] <- "avo_3"
+# colnames(data)[97] <- "diss_3"
+# colnames(data)[98] <- "anx_3"
+# colnames(data)[101] <- "now_own_1"
+# colnames(data)[102] <- "now_own_2"
+# colnames(data)[103] <- "now_own_3"
+# colnames(data)[104] <- "now_own_mean" # mean own memory nownness score across runs
+# colnames(data)[105] <- "STAR_ID"
 
 # does avoidance score explain variation in ROI signal?
 
@@ -66,8 +82,9 @@ data_long_runs <- data %>%
     values_to = "value"
   ) %>%
   mutate(run = as.character(run)) %>%
-  select(subject, site, CAPSB, age, run, ROI, value, now_own_mean, STAR_ID)   # keep covariates
-
+  filter(!is.na(subject), !is.na(value)) %>%   # remove rows with missing subject or value
+  select(subject, site, CAPSB, age, run, ROI, value, now_own_mean, STAR_ID)
+  
 # wide to long for avoidance scores
 data_long_avoid <- data %>%
   pivot_longer(
@@ -145,23 +162,6 @@ results <- data_long_runs %>%
   }, .id = "ROI")
 results
 
-# for each ROI, this LME tests whether avoidance scores predict ROI signal, 
-# accounting for repeated measurements within subjects. 
-# only vmpfc is significant (.037)
-
-#   ROI   effect group term        estimate std.error statistic    df p.value
-#   <chr> <chr>  <chr> <chr>          <dbl>     <dbl>     <dbl> <dbl>   <dbl>
-# 1 vv    fixed  NA    avoid_score  0.116      0.0552     2.10   140.  0.0376
-# 2 al    fixed  NA    avoid_score  0.00907    0.0592     0.153  140.  0.879 
-# 3 ar    fixed  NA    avoid_score  0.0756     0.0467     1.62   137.  0.108 
-# 4 hl    fixed  NA    avoid_score  0.0249     0.0405     0.616  130.  0.539 
-# 5 hr    fixed  NA    avoid_score  0.0400     0.0587     0.682  139.  0.496 
-
-# #--------------------------------------------------------------------------------
-# whether CAPSB scores differ as a function of ROI activation (main effect of ROI),
-# whether avoidance levels predict CAPSB (main effect of avg_avoid), and
-# whether the relationship between ROI activation and CAPSB depends on the participant’s avoidance (interaction term).
-
 
 
 #######################################################################################
@@ -178,7 +178,6 @@ get_vif_lmer <- function(model) {
   performance::check_collinearity(model)
 }
 # 20251021 amygdala combined model
-
 
 # Combine left/right amygdala into one dataset with hemi variable
 amygdala_data <- data_long_runs %>%
@@ -239,7 +238,6 @@ a_plot <- ggplot(aplot_data, aes(x = run, y = emmean, fill = site)) +
     panel.grid.major.x = element_blank()
   )
 ggsave("amyg_run*site.png", a_plot, width = 6, height = 4, dpi = 300)
-
 
 
 
@@ -404,7 +402,7 @@ vv_data <- subset(data_long_runs, ROI == "vv") %>%
   mutate(run = as.factor(run))
 
 v#v_data<-subset(vv_data, treatment)
-# 2️⃣ Run the mixed model for vv ROI
+# the mixed model for vv ROI
 m1_vv <- lmer(value ~ run + site + age + (1 | subject), # * CAPSB
               data = vv_data, REML = FALSE)
 summary(m1_vv)
@@ -440,52 +438,6 @@ ggsave("vmpfc_run*site.png", vv_plot, width = 6, height = 4, dpi = 300)
 
 
 
-
-# ---------------------------
-# 2. Scatter plots: CAPSB and Avoidance
-# ---------------------------
-# # CAPSB overall
-# plot_CAPSB <- ggplot(data_fitted, aes(x = CAPSB, y = fitted)) +
-#   geom_point() +
-#   geom_smooth(method = "lm", se = TRUE, color = "blue") +
-#   xlab("zCAPSB") + ylab("Fitted ROI signal") + theme_minimal()
-# ggsave("scatter_CAPSB.png", plot_CAPSB, width = 6, height = 4, dpi = 300)
-
-# # CAPSB by Site
-# plot_CAPSB_site <- ggplot(data_fitted, aes(x = CAPSB, y = fitted, color = site)) +
-#   geom_point() +
-#   geom_smooth(method = "lm", se = FALSE) +
-#   xlab("zCAPSB") + ylab("Fitted ROI signal") + theme_minimal()
-# ggsave("scatter_CAPSB_by_site.png", plot_CAPSB_site, width = 6, height = 4, dpi = 300)
-
-# # CAPSB by Run
-# plot_CAPSB_run <- ggplot(data_fitted, aes(x = CAPSB, y = fitted, color = run)) +
-#   geom_point() +
-#   geom_smooth(method = "lm", se = FALSE) +
-#   xlab("zCAPSB") + ylab("Fitted ROI signal") + theme_minimal()
-# ggsave("scatter_CAPSB_by_run.png", plot_CAPSB_run, width = 6, height = 4, dpi = 300)
-
-# # Avoidance overall
-# plot_avoid <- ggplot(data_fitted, aes(x = avoid_score, y = fitted)) +
-#   geom_point() +
-#   geom_smooth(method = "lm", se = TRUE, color = "darkgreen") +
-#   xlab("zblockAvoidance") + ylab("Fitted ROI signal") + theme_minimal()
-# ggsave("scatter_avoidance.png", plot_avoid, width = 6, height = 4, dpi = 300)
-
-# # Avoidance by Site
-# plot_avoid_site <- ggplot(data_fitted, aes(x = avoidance, y = fitted, color = site)) +
-#   geom_point() +
-#   geom_smooth(method = "lm", se = FALSE) +
-#   xlab("zblockAvoidance") + ylab("Fitted ROI signal") + theme_minimal()
-# ggsave("scatter_avoidance_by_site.png", plot_avoid_site, width = 6, height = 4, dpi = 300)
-
-# # Avoidance by Run
-# plot_avoid_run <- ggplot(data_fitted, aes(x = avoid_score, y = fitted, color = run)) +
-#   geom_point() +
-#   geom_smooth(method = "lm", se = FALSE) +
-#   xlab("zblockAvoidance") + ylab("Fitted ROI signal") + theme_minimal()
-# ggsave("scatter_avoidance_by_run.png", plot_avoid_run, width = 6, height = 4, dpi = 300)
-
 # ---------------------------
 # 3. Grouped bar plot: Run × Site
 # ---------------------------
@@ -506,10 +458,333 @@ ggsave("bar_Run_by_Site.png", plot_run_site, width = 6, height = 4, dpi = 300)
 ###########
 
 
+#------------------------------------------------------------------------------           REPORTING NUMBER OF VOXELS PRESENT AS A COVARIATE
+
+
+# 1. Read your CSV with the overlap data
+roi_overlap <- read.csv("/Users/zefreeman/Documents/roi_all_overlap_summary_20251120.csv")
+# Make sure it has columns like: subject, ROI_long, overlap
+
+# 2. Map long ROI names to short codes
+roi_map <- tribble(
+  ~ROI, ~ROI_short,
+  "lamygdala", "al",
+  "ramygdala", "ar",
+  "lhippocampus", "hl",
+  "rhippocampus", "hr",
+  "vmpfc", "vv"
+)
+roi_overlap <- roi_overlap %>%
+  left_join(roi_map, by = "ROI")
+
+data_long_runs_voxels <- data_long_runs %>%
+  left_join(roi_overlap %>% select(SubjectID, ROI_short, ProportionOverlap), 
+            by = c("subject" = "SubjectID", "ROI" = "ROI_short"))
+
+results_voxels <- data_long_runs_voxels %>%
+  mutate(run = as.factor(run)) %>%
+  group_split(ROI) %>%
+  set_names(unique(data_long_runs_voxels$ROI)) %>%
+  map(function(data_long_runs_voxels) {
+    cat("Running ROI:", unique(data_long_runs_voxels$ROI), "\n")
+    m <- try(
+      lmer(value ~ CAPSB * run + site + age + ProportionOverlap + (1 | subject),
+           data = data_long_runs_voxels, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m, "try-error")) {
+      cat("failed for:", unique(data_long_runs_voxels$ROI), "\n")
+      return(NULL)
+    }
+    cat("succeeded for:", unique(data_long_runs_voxels$ROI), "\n")
+    return(m)
+  })
+#results_m2
+map(results_voxels, summary)
+
+# Extract fixed effects from all ROIs
+results_table <- map_dfr(results_voxels, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+
+# Write to CSV
+write.csv(results_table, "results_vv_voxels.csv", row.names = FALSE)
+
+hipp_data_voxels <- data_long_runs_voxels %>%
+  filter(ROI %in% c("hl", "hr")) %>%
+  mutate(
+    hemi = ifelse(ROI == "hl", "L", "R"),
+    run = as.factor(run)
+  )
+
+# Run the mixed model                                                                   REPORTING THIS FOR HIPPOCAMPUS
+results_hipp_voxels <- hipp_data_voxels %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: hippocampus\n")
+    m1 <- try(
+      lmer(value ~ hemi + site + age + run * CAPSB + ProportionOverlap + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: h\n")
+      return(NULL)
+    }
+    cat("succeeded for: hippocampus\n")
+    return(m1)
+  }) %>%
+  set_names("hippocampus")
+map(results_hipp_voxels, summary)
+
+results_table <- map_dfr(results_hipp_voxels, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+write.csv(results_table, "results_h_voxels.csv", row.names = FALSE)
+
+amyg_data_voxels <- data_long_runs_voxels %>%
+  filter(ROI %in% c("al", "ar")) %>%
+  mutate(
+    hemi = ifelse(ROI == "al", "L", "R"),
+    run = as.factor(run)
+  )
+
+# Run the mixed model                                                                   REPORTING THIS FOR HIPPOCAMPUS
+results_amyg_voxels <- amyg_data_voxels %>%
+  #mutate(run = as.numeric(run)) %>%
+  group_split(ROI_group = "amygdala") %>%  # just for structure, single group
+  map(function(df) {
+    cat("Running ROI: a\n")
+    m1 <- try(
+      lmer(value ~ hemi + site + age + run * CAPSB + ProportionOverlap + (1 | subject),
+           data = df, REML = FALSE),
+      silent = TRUE
+    )
+    if (inherits(m1, "try-error")) {
+      cat("failed for: h\n")
+      return(NULL)
+    }
+    cat("succeeded for: a\n")
+    return(m1)
+  }) %>%
+  set_names("amygdala")
+map(results_amyg_voxels, summary)
+
+results_table <- map_dfr(results_amyg_voxels, function(model) {
+  if (is.null(model)) return(NULL)  # skip failed models
+  tidy(model) %>% 
+    select(term, estimate, std.error, df, statistic, p.value)
+}, .id = "ROI")  # add ROI as a column
+write.csv(results_table, "results_a_voxels.csv", row.names = FALSE)
+
+
+
+
 #------------------------------------------------------------------------------           REPORTING TRIAL BY TRIAL NOWNESS
 # nowness by trial for vmpfc
 
 trial_data <- read.csv("/Users/zefreeman/Documents/T1_nowness_ratings.csv", header = TRUE, stringsAsFactors = FALSE)
+
+# Filter to only "Yes" trials
+df_yes <- trial_data %>%
+  filter(IsOwn == "Yes")
+
+  # Filter to other trials
+df_other <- trial_data %>%
+  filter(IsOwn == "No")
+
+# Basic histogram of raw ratings across all trials, runs, participants                    HISTOGRAM OF RAW OWN NOWNESS RATINGS REPORTING
+nowrate <- ggplot(df_yes, aes(x = Rating)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "skyblue") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Distribution of Raw Own Nowness Ratings",
+    x = "Raw Rating",
+    y = "Count"
+  )
+ggsave(filename = "nowness_ratings_own.png", plot = nowrate, width = 8, height = 6, dpi = 300)
+
+summary_table_wide <- trial_data %>%
+  group_by(ScanSite, Run, IsOwn) %>%
+  summarise(
+    mean = mean(Rating, na.rm = TRUE),
+    sd   = sd(Rating, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(mean_sd = sprintf("%.2f (%.2f)", mean, sd)) %>%
+  select(ScanSite, Run, IsOwn, mean_sd) %>%
+  tidyr::pivot_wider(
+    names_from = Run,
+    values_from = mean_sd,
+    names_prefix = "Run "
+  )
+summary_table_wide
+write.csv(summary_table_wide, "T1_trialbynowness.csv", row.names = FALSE)
+
+
+summary_table_long <- df_yes %>%
+  filter(!is.na(Run), Run != "NA") %>%      # Remove NA or "NA" run values
+  group_by(ScanSite, Run) %>%
+  summarise(
+    mean = mean(Rating, na.rm = TRUE),
+    sd   = sd(Rating, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(mean), !is.na(sd)) 
+
+meannow <- ggplot(summary_table_long,                 #   REPORTING THIS PLOT FOR OWN NOWNESS RATING MEAN SCORES PER RUN
+       aes(x = factor(Run), y = mean, fill = ScanSite)) +
+  geom_bar(stat = "identity",
+           position = position_dodge(width = 0.8),
+           width = 0.7) +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd),
+                width = 0.2,
+                position = position_dodge(width = 0.8)) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Mean Own Nowness Rating by Run and Site (± SD)",
+    x = "Run",
+    y = "Mean Rating",
+    fill = "Site"
+  ) +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.major.x = element_blank()
+  )
+
+ggsave(filename = "m_nowness_ratings_own.png", plot = meannow, width = 8, height = 6, dpi = 300)
+
+
+########################################
+## CORRELATION OF NOWNESS WITH CAPS AND AVOIDANCE SCORES
+#########################################
+
+nowness_run_avgs <- trial_data %>%              #
+  filter(!is.na(Run), Run != "NA") %>%
+  group_by(subject = STAR_ID, run = Run) %>%
+  summarise(
+    mean_nowness = mean(Rating, na.rm = TRUE),
+    .groups = "drop"
+  )
+avoid_caps_runs <- data_long_runs %>%
+  filter(run %in% c(1,2,3)) %>%
+  group_by(STAR_ID, run) %>%
+  summarise(
+    mean_avoid = mean(avoid_score, na.rm = TRUE),
+    mean_CAPS  = mean(CAPSB, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+merged_runs <- nowness_run_avgs %>%
+  left_join(avoid_caps_runs, by = c("subject" = "STAR_ID", "run" = "run"))
+vars_for_cor <- merged_runs %>%
+  select(subject, run, mean_nowness, mean_avoid, mean_CAPS)
+cor_by_run <- function(run_num) {
+  df <- vars_for_cor %>%
+    filter(run == run_num) %>%
+    select(mean_nowness, mean_avoid, mean_CAPS)
+
+  cor(df, use = "complete.obs")
+}
+corr_run1 <- cor_by_run(1)
+corr_run2 <- cor_by_run(2)
+corr_run3 <- cor_by_run(3)
+
+# # Create a function to extract correlations in long format
+# cor_to_long <- function(cor_matrix, run_number) {
+#   melt(cor_matrix) %>%
+#     mutate(run = paste0("Run ", run_number))
+# }
+# library(reshape2)
+# # Convert all three runs
+# cor_long_all <- bind_rows(
+#   cor_to_long(corr_run1, 1),
+#   cor_to_long(corr_run2, 2),
+#   cor_to_long(corr_run3, 3)
+# )
+# heatmap<-ggplot(cor_long_all, aes(Var1, Var2, fill = value)) +
+#   geom_tile(color = "white") +
+#   geom_text(aes(label = sprintf("%.2f", value)), size = 4) +
+#   scale_fill_gradient2(
+#     low = "blue",
+#     mid = "white",
+#     high = "red",
+#     midpoint = 0,
+#     limits = c(-1, 1),
+#     name = "Correlation"
+#   ) +
+#   facet_wrap(~ run, nrow = 1) +    # side-by-side like a time series
+#   theme_minimal(base_size = 11) +
+#   labs(
+#     title = "Correlation Matrices Across Runs (Nowness, Avoidance, CAPS-B)",
+#     x = "",
+#     y = ""
+#   ) +
+#   theme(
+#     strip.text = element_text(size = 14, face = "bold"),
+#     axis.text.x = element_text(angle = 45, hjust = 1),
+#     panel.grid = element_blank()
+#   )
+# ggsave(filename = "heatmap_own.png", plot = heatmap, width = 8, height = 6, dpi = 300)
+
+
+
+
+# # Assign Run based on trial ranges
+# df_change <- df_yes %>%
+#   group_by(STAR_ID, ScanSite) %>%
+#   arrange(Trial, .by_group = TRUE) %>%
+#   mutate(
+#     baseline = first(Rating),
+#     change_from_baseline = Rating - baseline,
+#     Run = case_when(
+#       Trial <= 14 ~ "Run 1",
+#       Trial >= 15 & Trial <= 32 ~ "Run 2",
+#       Trial >= 33 ~ "Run 3"
+#     )
+#   ) %>%
+#   ungroup() %>%
+#   mutate(Run = factor(Run, levels = c("Run 1", "Run 2", "Run 3")))
+# # Define site-specific base colors and shading per run
+# site_colours <- list(
+#   "Newcastle" = c("Run 1" = "#1f77b4", "Run 2" = "#6baed6", "Run 3" = "#c6dbef"),
+#   "Manchester" = c("Run 1" = "#2ca02c", "Run 2" = "#1ca02c", "Run 3" = "#98df8a"),
+#   "London" = c("Run 1" = "#d62728", "Run 2" = "#ff9896", "Run 3" = "#e7969c")
+# )
+# # Function to generate plot per site
+# make_site_plot <- function(site_name) {
+
+#   df_site <- df_change %>% filter(ScanSite == site_name)
+
+#   ggplot(df_site,
+#          aes(x = Trial,
+#              y = change_from_baseline,
+#              group = STAR_ID,
+#              color = factor(Run))) +
+#     geom_line(alpha = 0.6) +
+#     geom_point(alpha = 0.7) +
+#     scale_color_manual(values = site_colours[[site_name]]) +
+#     labs(
+#       title = paste("Nowness Rating Change From Baseline –", site_name),
+#       x = "Trial",
+#       y = "Change From Baseline (Rating)",
+#       color = "Run"
+#     ) +
+#     theme_minimal(base_size = 14)
+# }
+# # Create the three plots
+# plot_london     <- make_site_plot("London")
+# plot_manchester <- make_site_plot("Manchester")
+# plot_newcastle  <- make_site_plot("Newcastle")
+# ggsave(filename = "T1_nowness_london.png", plot = plot_london, width = 8, height = 6, dpi = 300)
+# ggsave(filename = "T1_nowness_manchester.png", plot = plot_manchester, width = 8, height = 6, dpi = 300)
+# ggsave(filename = "T1_nowness_newcastle.png", plot = plot_newcastle, width = 8, height = 6, dpi = 300)
 
 trial_data <- trial_data %>%
   mutate(Run = as.integer(Run)) %>%
@@ -983,7 +1258,7 @@ results_table <- map_dfr(results_amygdala, function(model) {
 write.csv(results_table, "results_amyg.csv", row.names = FALSE)
 
 
-      
+
 #-------------------------------------------------------------------------------
 # LAST MODEL WITH THE MOST INTERACTIONS AND RUN EFFECTS
 # lmer(roi_signal ~ CAPSB * avoid_score * run + site + age + (1 + run | subject),
@@ -1117,8 +1392,6 @@ data_hr_fit <- data_hr_fit %>%
     run = as.factor(run)                             # convert run to factor
   )
 
-
-
 # Plot fitted vs. avoidance
 hr_fittedvsavoid <- ggplot(data_hr_fit, aes(x = avoid_score, y = fitted, color = run)) +
   geom_point(alpha = 0.6) +                         # scatter points
@@ -1171,28 +1444,6 @@ results <- data_long_runs %>%
 results
 
 
-##------------------------------------------------------------------------------------
-## not needed
-##-----------------------------------------------------------------------------------
-
-# compute average avoidance across runs
-data <- data %>%
-  mutate(avg_avoid = rowMeans(select(., avo_1, avo_2, avo_3), na.rm = TRUE))
-# list of ROI column names (replace with your actual ROI variable names)
-roi_cols <- c("vmpfc_v_total", "amyg_l_total", "amyg_r_total", 
-              "hipp_l_total", "hipp_r_total")
-# apply model-fitting function to each ROI
-roi_results <- map(roi_cols, ~ fit_roi_lm(.x, data)) %>%
-  set_names(roi_cols)
-# extract  tidy summaries and add ROI name
-roi_tidy <- map_dfr(roi_results, "tidy", .id = "ROI")
-# model-level summaries (R², AIC, etc.)
-roi_glance <- map_dfr(roi_results, "glance", .id = "ROI")
-print(roi_tidy)
-print(roi_glance)
-
-
-
 --------------------------------------------------------------------------------------
 ### 3. models per ROI and run: CAPSB ~ ROI + avoid_score + ROI:avoid_score + site (covariate)
 # ------------------------------------------------------------------------------------
@@ -1227,7 +1478,7 @@ roi_results_by_run %>%
 
 
 # ---------------------------------------------------------------------------------
-### 4. plots
+### 4. scatter plots
 # ---------------------------------------------------------------------------------
 
 library(tidyverse)
@@ -1335,173 +1586,5 @@ for(r in ROIs) {
 }
 
 
-####################### results:
-#### vmpfc:
-# main effect of avoidance: β = -0.22, p = 0.039* - higher avoidance scores predict lower VMPFCv activation in run1
-# run2 × Avoidance interaction: β = 0.37, p = 0.008** - avoidance effect becomes more positive in run2
-# run3 × Avoidance interaction: β = 0.49, p = 0.0006*** - strongest positive avoidance effect in run3
-# run1: Higher avoidance = Lower activation
-# run2: Avoidance effect becomes neutral/slightly positive
-# run3: Higher avoidance = sig higher activation
-# noise?
-
-# amygdala left (al): sig run effects (runs 2&3 < run1) but no avoid effects
-# amygdala right (ar): no CAPS no avoid
-# left hipp: no avoid
-# r hipp: sig run3 × CAPSB interaction (p = 0.030*), but no avoid effects
-#########################
 
 
-# additional analysis: models with all three bh scores
-# run (1,2,3) specific ROIs vs CAPSB with all bh measures
-model_full <- lmer(value ~ run + CAPSB + avoid_score + anxiety_score + diss_score + 
-                   run:CAPSB + run:avoid_score + (1 | subject), 
-                   data = data_long %>% filter(run != "total"))
-summary(model_full)
-
-# separate models per ROI with all bh measures
-models_list_full <- list()
-for(r in ROIs) {
-  cat("Processing ROI with full model:", r, "\n")
-  mod_full <- lmer(value ~ run * CAPSB + avoid_score + anxiety_score + diss_score + 
-                   run:avoid_score + (1 | subject),
-                   data = data_long_runs %>% filter(ROI == r))
-  print(summary(mod_full))
-  models_list_full[[r]] <- mod_full
-}
-
-
-# # wide to long for run-specific ROIs
-# data_long_runs <- data %>%
-#   pivot_longer(
-#     cols = c(run1vv, run2vv, run3vv, 
-#              run1al, run2al, run3al, 
-#              run1ar, run2ar, run3ar, 
-#              run1hl, run2hl, run3hl, 
-#              run1hr, run2hr, run3hr),
-#     names_to = c("run", "ROI"),
-#     names_pattern = "run([0-9]+)([a-zA-Z]+)",
-#     values_to = "value"
-#   ) %>%
-#   select(subject, site_no, CAPSB, run, ROI, value)   # keep covariates
-
-# # wide to long for total ROIs
-# data_totals <- data %>%
-#   pivot_longer(
-#     cols = c(vmpfc_v_total,
-#              amyg_l_total, amyg_r_total, 
-#              hipp_l_total, hipp_r_total),
-#     names_to = "ROI",
-#     names_pattern = "(.+)_total",
-#     values_to = "value"
-#   ) %>%
-#   mutate(run = "total") %>%
-#   select(subject, site_no, CAPSB, run, ROI, value)
-
-
-# # combine both long
-# data_long <- bind_rows(data_long_runs, data_totals)
-# print(data_long)
-
-# ### total ROIs t-tests
-# data_totals_filtered <- data_long %>% filter(run == "total")
-# ROIs_totals <- unique(data_totals_filtered$ROI)
-# # t-tests
-# for(r in ROIs_totals) {
-#   cat("T-test for ROI:", r, "\n")
-#   roi_values <- data_totals_filtered %>% 
-#                 filter(ROI == r) %>% 
-#                 pull(value)
-#   print(t.test(roi_values, mu = 0))
-# }
-
-# ### total ROIs vs CAPSB
-# model_totals <- lmer(value ~ ROI * CAPSB + site_no (1 | subject), data = data_long %>% filter(run=="total"))
-# summary(model_totals)
-
-# # run (1,2,3) specific ROIs vs CAPSB
-# model <- lmer(value ~ run + CAPSB + run:CAPSB + (1 | subject), data = data_long %>% filter(run != "total"))
-# summary(model)
-
-# # run (1,2,3) specific ROIs vs CAPSB, separate models per ROI
-# ROIs <- unique(data_long_runs$ROI)
-# models_list <- list()
-# for(r in ROIs) {
-#   cat("Processing ROI:", r, "\n")
-#   mod <- lmer(value ~ run * CAPSB + (1 | subject),
-#               data = data_long_runs %>% filter(ROI == r))
-#   print(summary(mod))
-#   models_list[[r]] <- mod
-# } # add the three avoidance scores per run --
-
-# ####### PLOTS #######
-
-# df_vv <- data_long_runs %>% filter(ROI == "vv")
-# # ROI values against CAPSB
-# ggplot(df_vv, aes(x = CAPSB, y = value, color = run)) +
-#   geom_point(alpha = 0.6) +
-#   geom_smooth(method = "lm", se = TRUE, size = 1.2) +
-#   labs(
-#     title = "Region of interest values for contrast of own > control cue in vmPFC vs CAPS B subscale",
-#     x = "CAPS B subscale score",
-#     y = "ROI contrast value",
-#     color = "Run"
-#   ) +
-#   theme_minimal(base_size = 14)
-
-
-# df_al <- data_long_runs %>% filter(ROI == "al")
-# # ROI values against CAPSB
-# ggplot(df_al, aes(x = CAPSB, y = value, color = run)) +
-#   geom_point(alpha = 0.6) +
-#   geom_smooth(method = "lm", se = TRUE, size = 1.2) +
-#   labs(
-#     title = "Region of interest values for contrast of own > control cue in left amygdala vs CAPS B subscale",
-#     x = "CAPS B subscale score",
-#     y = "ROI contrast value",
-#     color = "Run"
-#   ) +
-#   theme_minimal(base_size = 14)
-
-# df_ar <- data_long_runs %>% filter(ROI == "ar")
-# # ROI values against CAPSB
-# ggplot(df_ar, aes(x = CAPSB, y = value, color = run)) +
-#   geom_point(alpha = 0.6) +
-#   geom_smooth(method = "lm", se = TRUE, size = 1.2) +
-#   labs(
-#     title = "Region of interest values for contrast of own > control cue in right amygdala vs CAPS B subscale",
-#     x = "CAPS B subscale score",
-#     y = "ROI contrast value",
-#     color = "Run"
-#   ) +
-#   theme_minimal(base_size = 14)
-
-# df_hl <- data_long_runs %>% filter(ROI == "hl")
-# # ROI values against CAPSB
-# ggplot(df_hl, aes(x = CAPSB, y = value, color = run)) +
-#   geom_point(alpha = 0.6) +
-#   geom_smooth(method = "lm", se = TRUE, size = 1.2) +
-#   labs(
-#     title = "Region of interest values for contrast of own > control cue in left hippocampus vs CAPS B subscale",
-#     x = "CAPS B subscale score",
-#     y = "ROI contrast value",
-#     color = "Run"
-#   ) +
-#   theme_minimal(base_size = 14)
-
-# df_hr <- data_long_runs %>% filter(ROI == "hr")
-# # ROI values against CAPSB
-# ggplot(df_hr, aes(x = CAPSB, y = value, color = run)) +
-#   geom_point(alpha = 0.6) +
-#   geom_smooth(method = "lm", se = TRUE, size = 1.2) +
-#   labs(
-#     title = "Region of interest values for contrast of own > control cue in right hippocampus vs CAPS B subscale",
-#     x = "CAPS B subscale score",
-#     y = "ROI contrast value",
-#     color = "Run"
-#   ) +
-#   theme_minimal(base_size = 14)
-
-
-# #betas afterwards for plotting only, use contrasts for stats
-# #bar for own and control, having two bars rather than contrast single bars - mean of the betas not same as mean of diff but wtv
