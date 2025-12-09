@@ -1,13 +1,28 @@
-library(tidyr)
-library(dplyr)
-library(lme4)
-library(lmerTest)
-library(ggplot2)
-library(broom.mixed)
-library(purrr)
+# ---------------------------------------------------------------
+# Ze Freeman, 20251017----
 
-data <- read.csv("/Users/zefreeman/Documents/All_ROIs_20251017.csv", header = TRUE, stringsAsFactors = FALSE)
+install.packages("pacman")
+pacman::p_load(tidyr, tidyverse, dplyr, lme4, lmerTest, performance,
+               ggplot2, broom.mixed, purrr, emmeans)
+# to do:
+# - -------correlations between hand made contrasts and marsbar contrasts
 
+# - correlate mean FD and number of spikes - if not correlated then great
+# - linear mixed effects model with FD spikes PER RUN
+
+# - add mean FD as a covariate and a cumulative no. of spikes as a covariate
+#      SPM can't handle the variance so if there's a big spike it just nukes effects
+#      this won't be as sensitive as LME with run specific number of spikes but it 
+#      will be better
+
+# - why did some people not run in the baseline group level model
+# - number of spikes in pre and post both being added to the pre/post model
+
+
+# 0. Data loading -------------------------------------------------------------
+
+data <- read.csv("/Users/zefreeman/Documents/All_ROIs_20251017.csv",
+                            header = TRUE, stringsAsFactors = FALSE)
 newnames <- c(
   "subject" = 1, "site" = 3, "age" = 8, "CAPSB" = 9,
   "run1vv" = 10, "run2vv" = 11, "run3vv" = 12, "vmpfc_v_total" = 13,
@@ -24,50 +39,23 @@ newnames <- c(
 )
 names(data)[newnames] <- names(newnames)
 
-# colnames(data)[1] <- "subject"
-# colnames(data)[3] <- "site"
-# colnames(data)[8] <- "age"
-# colnames(data)[9] <- "CAPSB"
-# colnames(data)[10] <- "run1vv"
-# colnames(data)[11] <- "run2vv"
-# colnames(data)[12] <- "run3vv"
-# colnames(data)[13] <- "vmpfc_v_total"
-# colnames(data)[22] <- "run1vd" # not using
-# colnames(data)[23] <- "run2vd" # not using
-# colnames(data)[24] <- "run3vd" # not using
-# colnames(data)[25] <- "vmpfc_d_total" # not using
-# colnames(data)[34] <- "run1al"
-# colnames(data)[35] <- "run2al"
-# colnames(data)[36] <- "run3al"
-# colnames(data)[37] <- "amyg_l_total"
-# colnames(data)[46] <- "run1ar"
-# colnames(data)[47] <- "run2ar"
-# colnames(data)[48] <- "run3ar"
-# colnames(data)[49] <- "amyg_r_total"
-# colnames(data)[58] <- "run1hl"
-# colnames(data)[59] <- "run2hl"
-# colnames(data)[60] <- "run3hl"
-# colnames(data)[61] <- "hipp_l_total"
-# colnames(data)[70] <- "run1hr"
-# colnames(data)[71] <- "run2hr"
-# colnames(data)[72] <- "run3hr"
-# colnames(data)[73] <- "hipp_r_total"
-# colnames(data)[90] <- "avo_1"
-# colnames(data)[91] <- "diss_1"
-# colnames(data)[92] <- "anx_1"
-# colnames(data)[93] <- "avo_2"
-# colnames(data)[94] <- "diss_2"
-# colnames(data)[95] <- "anx_2"
-# colnames(data)[96] <- "avo_3"
-# colnames(data)[97] <- "diss_3"
-# colnames(data)[98] <- "anx_3"
-# colnames(data)[101] <- "now_own_1"
-# colnames(data)[102] <- "now_own_2"
-# colnames(data)[103] <- "now_own_3"
-# colnames(data)[104] <- "now_own_mean" # mean own memory nownness score across runs
-# colnames(data)[105] <- "STAR_ID"
+trial_data <- read.csv("/Users/zefreeman/Documents/T1_nowness_ratings.csv",
+                                    header = TRUE, stringsAsFactors = FALSE)
 
-# does avoidance score explain variation in ROI signal?
+roi_overlap <- read.csv("/Users/zefreeman/Documents/roi_all_overlap_summary_20251120.csv")
+roi_map <- tribble(
+  ~ROI, ~ROI_short,
+  "lamygdala", "al",
+  "ramygdala", "ar",
+  "lhippocampus", "hl",
+  "rhippocampus", "hr",
+  "vmpfc", "vv"
+)
+roi_overlap <- roi_overlap %>%
+  left_join(roi_map, by = "ROI")
+
+
+# 0. Reshaping -------------------------------------------------------------
 
 # wide to long for run-specific ROIs
 data_long_runs <- data %>%
@@ -82,9 +70,9 @@ data_long_runs <- data %>%
     values_to = "value"
   ) %>%
   mutate(run = as.character(run)) %>%
-  filter(!is.na(subject), !is.na(value)) %>%   # remove rows with missing subject or value
+  filter(!is.na(subject), !is.na(value)) %>%  # remove rows w missing p or val
   select(subject, site, CAPSB, age, run, ROI, value, now_own_mean, STAR_ID)
-  
+
 # wide to long for avoidance scores
 data_long_avoid <- data %>%
   pivot_longer(
@@ -120,42 +108,19 @@ data_long_runs <- data_long_runs %>%
 #     mutate(run = as.character(run)) %>%
 #   select(subject, run, anxiety_score)
 
-# # wide to long for dissociation
-# data_long_diss <- data %>%
-#   pivot_longer(
-#     cols = c(diss_1, diss_2, diss_3),
-#     names_to = "run",
-#     names_pattern = "diss_([0-9]+)",
-#     values_to = "diss_score"
-#   ) %>%
-#   mutate(run = as.character(run)) %>%
-#   select(subject, run, diss_score)
-
-# wide to long for nowness
-# data_long_now <- data %>%
-#   pivot_longer(
-#     cols = c(now_own_1, now_own_2, now_own_3),
-#     names_to = "run",
-#     names_pattern = "now_own_([0-9]+)",
-#     values_to = "now_score"
-#   ) %>%
-#   mutate(run = as.character(run)) %>%
-#   select(subject, run, now_score)
-
 # data_long_runs <- data_long_runs %>%
 #   mutate(run = as.character(run)) %>%
 #   left_join(data_long_now, by = c("subject", "run"))
 
 
------------------------------------------------------------------------------------
-### 1. LME per ROI without CAPS and without random slopes, overall not by run
------------------------------------------------------------------------------------ # nolint
+# 1. LME per ROI without CAPS and wo random slopes, overall not by run ---------
 
 results <- data_long_runs %>%
   group_split(ROI) %>%
   set_names(unique(data_long_runs$ROI)) %>%
   map_dfr(function(data_long_runs) {
-    m <- try(lmer(roi_signal ~ avoid_score + site + (1 | subject), data = data_long_runs), silent = TRUE)
+    m <- try(lmer(roi_signal ~ avoid_score + site + (1 | subject),
+                            data = data_long_runs), silent = TRUE)
     if (inherits(m, "try-error")) return(NULL)
     tidy(m) %>%
       filter(term == "avoid_score")
@@ -164,15 +129,10 @@ results
 
 
 
-#######################################################################################
---------------------------------------------------------------------------
-# 2. mixed effects with random slope for run, stepwise across multiple USING THESE <<<<<<<<<<<<<<<<<<<<<<<
-# ---------------------------------------------------------------------------
+# 2. mixed effects w random slope for run, stepwise across multiple USING <-----
 
 data_long_runs <- data_long_runs %>% # nolint
   mutate(run = as.numeric(run))
-
-library(performance)
 
 get_vif_lmer <- function(model) {
   performance::check_collinearity(model)
@@ -187,7 +147,7 @@ amygdala_data <- data_long_runs %>%
     run = as.factor(run)
   )
 
-# Run the mixed model                                                             REPORTING THIS FOR AMYGDALA
+# Run the mixed model                                  REPORTING THIS FOR AMYGDALA
 results_amygdala <- amygdala_data %>%
   #mutate(run = as.numeric(run)) %>%
   group_split(ROI_group = "amygdala") %>%  # just for structure, single group
@@ -210,15 +170,15 @@ map(results_amygdala, summary)
 
 
 
-library(broom.mixed)
-library(emmeans)
 m1_amygdala <- results_amygdala$amygdala
-# Compute estimated marginal means (predicted means per run × site)
+
+# Compute estimated marginal means (predicted means per run × site) to then plot
 emm_amygdala <- emmeans(m1_amygdala, ~ site * run)
 aplot_data <- as.data.frame(emm_amygdala)
 
 a_plot <- ggplot(aplot_data, aes(x = run, y = emmean, fill = site)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_bar(stat = "identity", 
+  position = position_dodge(width = 0.8), width = 0.7) +
   geom_errorbar(
     aes(ymin = emmean - SE, ymax = emmean + SE),
     width = 0.2,
@@ -260,7 +220,7 @@ hipp_data <- data_long_runs %>%
     run = as.factor(run)
   )
 
-# Run the mixed model                                                                   REPORTING THIS FOR HIPPOCAMPUS
+# Run the mixed model                              REPORTING THIS FOR HIPPOCAMPUS
 results_hipp <- hipp_data %>%
   #mutate(run = as.numeric(run)) %>%
   group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
@@ -287,7 +247,8 @@ emm_hipp <- emmeans(m1_hipp, ~ site * run)
 hplot_data <- as.data.frame(emm_hipp)
 
 h_plot <- ggplot(hplot_data, aes(x = run, y = emmean, fill = site)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  geom_bar(stat = "identity", 
+  position = position_dodge(width = 0.8), width = 0.7) +
   geom_errorbar(
     aes(ymin = emmean - SE, ymax = emmean + SE),
     width = 0.2,
@@ -309,10 +270,6 @@ h_plot <- ggplot(hplot_data, aes(x = run, y = emmean, fill = site)) +
 
 ggsave("hipp_run*site.png", h_plot, width = 6, height = 4, dpi = 300)
 
-
-
-
-
 # Extract fixed effects from all ROIs
 results_table <- map_dfr(results_hipp, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
@@ -325,19 +282,13 @@ write.csv(results_table, "results_hipp.csv", row.names = FALSE)
 
 
 
-
-
-
-#-----------------------------------------------------------------------------
-# SIMPLEST, no interaction, no avoidance
-# lmer(roi_signal ~ CAPSB + run + site + age + (1 + subject),
-
+# vmpfc model ----------------------------------------
 results_m1 <- data_long_runs %>%
   mutate(run = as.factor(run)) %>%
   group_split(ROI) %>%
   set_names(unique(data_long_runs$ROI)) %>%
   map(function(data_long_runs) {
-    cat("Running ROI:", unique(data_long_runs$ROI), "\n")
+    cat("Running ROI for vmpfc et al:", unique(data_long_runs$ROI), "\n")
     m1 <- try(
       lmer(roi_signal ~ site + age + run * CAPSB + (1 | subject),
            data = data_long_runs, REML = FALSE),
@@ -357,7 +308,7 @@ vif_results <- results_m1 %>%
   compact() %>%  # remove NULLs if any
   map(get_vif_lmer)
 
-#------------------------------------------------------------------------------
+
 # SIMPLEST INCLUDING INTERACTION W/CAPS BY RUN, no avoidance                          REPORTING THIS FOR VMPFC
 #      lmer(roi_signal ~ CAPSB * run + site + age + (1 | subject),
 
@@ -393,10 +344,8 @@ results_table <- map_dfr(results_m2, function(model) {
 write.csv(results_table, "results_m2.csv", row.names = FALSE)
 
 
-#------------------------------------------------------------------------------
-# plots of these
-#------------------------------------------------------------------------------
-#################################
+
+# plots of these ------------------------------------------------------------------------------
 
 vv_data <- subset(data_long_runs, ROI == "vv") %>%
   mutate(run = as.factor(run))
@@ -438,9 +387,9 @@ ggsave("vmpfc_run*site.png", vv_plot, width = 6, height = 4, dpi = 300)
 
 
 
-# ---------------------------
-# 3. Grouped bar plot: Run × Site
-# ---------------------------
+
+# 3. Grouped bar plot: Run × Site ------------------------------------------------------
+
 run_site_summary <- data_fitted %>%
   group_by(run, site) %>%
   summarise(meanF = mean(fitted, na.rm = TRUE),
@@ -458,24 +407,8 @@ ggsave("bar_Run_by_Site.png", plot_run_site, width = 6, height = 4, dpi = 300)
 ###########
 
 
-#------------------------------------------------------------------------------           REPORTING NUMBER OF VOXELS PRESENT AS A COVARIATE
 
-
-# 1. Read your CSV with the overlap data
-roi_overlap <- read.csv("/Users/zefreeman/Documents/roi_all_overlap_summary_20251120.csv")
-# Make sure it has columns like: subject, ROI_long, overlap
-
-# 2. Map long ROI names to short codes
-roi_map <- tribble(
-  ~ROI, ~ROI_short,
-  "lamygdala", "al",
-  "ramygdala", "ar",
-  "lhippocampus", "hl",
-  "rhippocampus", "hr",
-  "vmpfc", "vv"
-)
-roi_overlap <- roi_overlap %>%
-  left_join(roi_map, by = "ROI")
+# proportion of voxels present as covariate -------------------------------------------------         REPORTING THIS FOR VMPFC WITH VOXEL COVARIATE
 
 data_long_runs_voxels <- data_long_runs %>%
   left_join(roi_overlap %>% select(SubjectID, ROI_short, ProportionOverlap), 
@@ -585,10 +518,8 @@ write.csv(results_table, "results_a_voxels.csv", row.names = FALSE)
 
 
 
-#------------------------------------------------------------------------------           REPORTING TRIAL BY TRIAL NOWNESS
+# trial by trial nowness ------------------------------------------------------------------------------           REPORTING TRIAL BY TRIAL NOWNESS
 # nowness by trial for vmpfc
-
-trial_data <- read.csv("/Users/zefreeman/Documents/T1_nowness_ratings.csv", header = TRUE, stringsAsFactors = FALSE)
 
 # Filter to only "Yes" trials
 df_yes <- trial_data %>%
@@ -696,96 +627,9 @@ corr_run1 <- cor_by_run(1)
 corr_run2 <- cor_by_run(2)
 corr_run3 <- cor_by_run(3)
 
-# # Create a function to extract correlations in long format
-# cor_to_long <- function(cor_matrix, run_number) {
-#   melt(cor_matrix) %>%
-#     mutate(run = paste0("Run ", run_number))
-# }
-# library(reshape2)
-# # Convert all three runs
-# cor_long_all <- bind_rows(
-#   cor_to_long(corr_run1, 1),
-#   cor_to_long(corr_run2, 2),
-#   cor_to_long(corr_run3, 3)
-# )
-# heatmap<-ggplot(cor_long_all, aes(Var1, Var2, fill = value)) +
-#   geom_tile(color = "white") +
-#   geom_text(aes(label = sprintf("%.2f", value)), size = 4) +
-#   scale_fill_gradient2(
-#     low = "blue",
-#     mid = "white",
-#     high = "red",
-#     midpoint = 0,
-#     limits = c(-1, 1),
-#     name = "Correlation"
-#   ) +
-#   facet_wrap(~ run, nrow = 1) +    # side-by-side like a time series
-#   theme_minimal(base_size = 11) +
-#   labs(
-#     title = "Correlation Matrices Across Runs (Nowness, Avoidance, CAPS-B)",
-#     x = "",
-#     y = ""
-#   ) +
-#   theme(
-#     strip.text = element_text(size = 14, face = "bold"),
-#     axis.text.x = element_text(angle = 45, hjust = 1),
-#     panel.grid = element_blank()
-#   )
-# ggsave(filename = "heatmap_own.png", plot = heatmap, width = 8, height = 6, dpi = 300)
 
 
-
-
-# # Assign Run based on trial ranges
-# df_change <- df_yes %>%
-#   group_by(STAR_ID, ScanSite) %>%
-#   arrange(Trial, .by_group = TRUE) %>%
-#   mutate(
-#     baseline = first(Rating),
-#     change_from_baseline = Rating - baseline,
-#     Run = case_when(
-#       Trial <= 14 ~ "Run 1",
-#       Trial >= 15 & Trial <= 32 ~ "Run 2",
-#       Trial >= 33 ~ "Run 3"
-#     )
-#   ) %>%
-#   ungroup() %>%
-#   mutate(Run = factor(Run, levels = c("Run 1", "Run 2", "Run 3")))
-# # Define site-specific base colors and shading per run
-# site_colours <- list(
-#   "Newcastle" = c("Run 1" = "#1f77b4", "Run 2" = "#6baed6", "Run 3" = "#c6dbef"),
-#   "Manchester" = c("Run 1" = "#2ca02c", "Run 2" = "#1ca02c", "Run 3" = "#98df8a"),
-#   "London" = c("Run 1" = "#d62728", "Run 2" = "#ff9896", "Run 3" = "#e7969c")
-# )
-# # Function to generate plot per site
-# make_site_plot <- function(site_name) {
-
-#   df_site <- df_change %>% filter(ScanSite == site_name)
-
-#   ggplot(df_site,
-#          aes(x = Trial,
-#              y = change_from_baseline,
-#              group = STAR_ID,
-#              color = factor(Run))) +
-#     geom_line(alpha = 0.6) +
-#     geom_point(alpha = 0.7) +
-#     scale_color_manual(values = site_colours[[site_name]]) +
-#     labs(
-#       title = paste("Nowness Rating Change From Baseline –", site_name),
-#       x = "Trial",
-#       y = "Change From Baseline (Rating)",
-#       color = "Run"
-#     ) +
-#     theme_minimal(base_size = 14)
-# }
-# # Create the three plots
-# plot_london     <- make_site_plot("London")
-# plot_manchester <- make_site_plot("Manchester")
-# plot_newcastle  <- make_site_plot("Newcastle")
-# ggsave(filename = "T1_nowness_london.png", plot = plot_london, width = 8, height = 6, dpi = 300)
-# ggsave(filename = "T1_nowness_manchester.png", plot = plot_manchester, width = 8, height = 6, dpi = 300)
-# ggsave(filename = "T1_nowness_newcastle.png", plot = plot_newcastle, width = 8, height = 6, dpi = 300)
-
+# Now merge vv data with trial data for trial by trial analysis
 trial_data <- trial_data %>%
   mutate(Run = as.integer(Run)) %>%
   rename(STAR_ID = SubjectID)
@@ -1377,8 +1221,7 @@ walk2(results_m7, names(results_m7), function(model, roi_name) {
 
 
 ###########################
-# plots 20251008
-########################### 
+# plots 20251008 ------------------------------------------------------------------------
 
 # Extract subjects used in the right hippocampus model
 subjects_in_model <- unique(m_hr@frame$subject)
@@ -1412,9 +1255,7 @@ ggsave(
 )
 
 
------------------------------------------------------------------------------------
-### 2. models per ROI: CAPSB ~ ROI + avg_avoid + ROI:avg_avoid + site (covariate)
-# ---------------------------------------------------------------------------------
+# models per ROI: CAPSB ~ ROI + avg_avoid + ROI:avg_avoid + site (covariate) ---------------
 
 # # linear models per ROI total score with avoidance averaged !
 # fit_roi_lm <- function(roi_col, df) {
@@ -1444,9 +1285,7 @@ results <- data_long_runs %>%
 results
 
 
---------------------------------------------------------------------------------------
-### 3. models per ROI and run: CAPSB ~ ROI + avoid_score + ROI:avoid_score + site (covariate)
-# ------------------------------------------------------------------------------------
+# models per ROI and run: CAPSB ~ ROI + avoid_score + ROI:avoid_score + site (covariate) -----
 
 # Ensure run is treated as a factor (categorical)
 data_long_runs <- data_long_runs %>%
@@ -1477,14 +1316,7 @@ roi_results_by_run %>%
 
 
 
-# ---------------------------------------------------------------------------------
-### 4. scatter plots
-# ---------------------------------------------------------------------------------
-
-library(tidyverse)
-library(lme4)
-library(lmerTest)
-library(ggplot2)
+# scatter plots --------------------------------------------------------------------
 
 # Make folder for plots
 if (!dir.exists("ROI_scatterplots")) dir.create("ROI_scatterplots")
@@ -1545,9 +1377,9 @@ interaction_results <- map_dfr(names(results_lm), function(rc) {
 })
 
 
---------------------------------------------------------------------------------
-### model per ROI: CAPSB ~ ROI + avg_avoid + ROI:avg_avoid + site_no (covariate)
-# ------------------------------------------------------------------------------
+
+# model per ROI: CAPSB ~ ROI + avg_avoid + ROI:avg_avoid + site_no (covariate) ---------------------------
+
 
 ### total ROIs t-testss
 data_totals_filtered <- data_long %>% filter(run == "total")
@@ -1584,7 +1416,3 @@ for(r in ROIs) {
   print(summary(mod))
   models_list[[r]] <- mod
 }
-
-
-
-
