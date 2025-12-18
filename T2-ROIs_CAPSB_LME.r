@@ -1,111 +1,36 @@
-library(tidyr)
-library(dplyr)
-library(lme4)
-library(lmerTest)
-library(ggplot2)
-library(broom.mixed)
-library(purrr)
+# ---------------------------------------------------------------
+# Ze Freeman, 20251017 ----
+
+#install.packages("pacman")
+library(pacman)
+pacman::p_load(tidyr, dplyr, lme4, lmerTest, 
+               ggplot2, broom.mixed, purrr) 
+
+
+# 0. Data loading -------------------------------------------------------------
 
 data_T2 <- read.csv("/Users/zefreeman/Documents/Prepost_ROIs_20251023.csv", header = TRUE, stringsAsFactors = FALSE)
 
-colnames(data_T2)[1] <- "subject"
-colnames(data_T2)[3] <- "site"
-colnames(data_T2)[5] <- "treatment_group"
-colnames(data_T2)[8] <- "age"
-colnames(data_T2)[9] <- "CAPSB"
-colnames(data_T2)[10] <- "run1vv"
-colnames(data_T2)[11] <- "run2vv"
-colnames(data_T2)[12] <- "run3vv"
-colnames(data_T2)[13] <- "vmpfc_v_total"
-colnames(data_T2)[22] <- "run1vd" # not using
-colnames(data_T2)[23] <- "run2vd" # not using
-colnames(data_T2)[24] <- "run3vd" # not using
-colnames(data_T2)[25] <- "vmpfc_d_total" # not using
-colnames(data_T2)[34] <- "run1al"
-colnames(data_T2)[35] <- "run2al"
-colnames(data_T2)[36] <- "run3al"
-colnames(data_T2)[37] <- "amyg_l_total"
-colnames(data_T2)[46] <- "run1ar"
-colnames(data_T2)[47] <- "run2ar"
-colnames(data_T2)[48] <- "run3ar"
-colnames(data_T2)[49] <- "amyg_r_total"
-colnames(data_T2)[58] <- "run1hl"
-colnames(data_T2)[59] <- "run2hl"
-colnames(data_T2)[60] <- "run3hl"
-colnames(data_T2)[61] <- "hipp_l_total"
-colnames(data_T2)[70] <- "run1hr"
-colnames(data_T2)[71] <- "run2hr"
-colnames(data_T2)[72] <- "run3hr"
-colnames(data_T2)[73] <- "hipp_r_total"
-colnames(data_T2)[90] <- "avo_1"
-colnames(data_T2)[91] <- "diss_1"
-colnames(data_T2)[92] <- "anx_1"
-colnames(data_T2)[93] <- "avo_2"
-colnames(data_T2)[94] <- "diss_2"
-colnames(data_T2)[95] <- "anx_2"
-colnames(data_T2)[96] <- "avo_3"
-colnames(data_T2)[97] <- "diss_3"
-colnames(data_T2)[98] <- "anx_3"
-colnames(data_T2)[101] <- "now_own_1"
-colnames(data_T2)[102] <- "now_own_2"
-colnames(data_T2)[103] <- "now_own_3"
-colnames(data_T2)[104] <- "now_own_mean" # mean own memory nownness score across runs
-colnames(data_T2)[108] <- "run1vv_T2"
-colnames(data_T2)[109] <- "run2vv_T2"
-colnames(data_T2)[110] <- "run3vv_T2"
-colnames(data_T2)[112] <- "vmpfc_v_total_T2"
-# colnames(data_T2)[113] <- "run1vd_T2" # not using
-# colnames(data_T2)[114] <- "run2vd_T2" # not using
-# colnames(data_T2)[115] <- "run3vd_T2" # not using
-# colnames(data_T2)[116] <- "vmpfc_d_total_T2" # not using
-colnames(data_T2)[132] <- "run1al_T2"
-colnames(data_T2)[133] <- "run2al_T2"
-colnames(data_T2)[134] <- "run3al_T2"
-colnames(data_T2)[135] <- "amyg_l_total_T2"
-colnames(data_T2)[144] <- "run1ar_T2"
-colnames(data_T2)[145] <- "run2ar_T2"
-colnames(data_T2)[146] <- "run3ar_T2"
-colnames(data_T2)[147] <- "amyg_r_total_T2"
-colnames(data_T2)[156] <- "run1hl_T2"
-colnames(data_T2)[157] <- "run2hl_T2"
-colnames(data_T2)[158] <- "run3hl_T2"
-colnames(data_T2)[159] <- "hipp_l_total_T2"
-colnames(data_T2)[168] <- "run1hr_T2"
-colnames(data_T2)[169] <- "run2hr_T2"
-colnames(data_T2)[170] <- "run3hr_T2"
-colnames(data_T2)[171] <- "hipp_r_total_T2"
-colnames(data_T2)[184] <- "run1hl_beta_own" # hippocampus left beta value to own cue in run 1
-colnames(data_T2)[185] <- "run2hl_beta_own"
-colnames(data_T2)[186] <- "run3hl_beta_own"
-colnames(data_T2)[187] <- "run1hl_beta_other" # hippocampus left beta value to other cue in run 1
-colnames(data_T2)[188] <- "run2hl_beta_other"
-colnames(data_T2)[189] <- "run3hl_beta_other"
-colnames(data_T2)[190] <- "run1hr_beta_own" # hippocampus right beta value to own cue in run 1
-colnames(data_T2)[191] <- "run2hr_beta_own"
-colnames(data_T2)[192] <- "run3hr_beta_own"
-colnames(data_T2)[193] <- "run1hr_beta_other" # hippocampus right beta value to other cue in run 1
-colnames(data_T2)[194] <- "run2hr_beta_other"
-colnames(data_T2)[195] <- "run3hr_beta_other"
-colnames(data_T2)[196] <- "run1whbr_beta_own" # whole brain beta value to own cue in run 1 at baseline
-colnames(data_T2)[197] <- "run2whbr_beta_own"
-colnames(data_T2)[198] <- "run3whbr_beta_own"
-colnames(data_T2)[199] <- "whbr_own_beta_total"
-colnames(data_T2)[200] <- "run1whbr_beta_own_T2" # whole brain beta value to own cue in run 1 at follow up
-colnames(data_T2)[201] <- "run2whbr_beta_own_T2"
-colnames(data_T2)[202] <- "run3whbr_beta_own_T2"
-colnames(data_T2)[203] <- "whbr_own_beta_total_T2"
-colnames(data_T2)[204] <- "run1hl_beta_own_T2"
-colnames(data_T2)[205] <- "run2hl_beta_own_T2"
-colnames(data_T2)[206] <- "run3hl_beta_own_T2"
-colnames(data_T2)[207] <- "run1hl_beta_other_T2"
-colnames(data_T2)[208] <- "run2hl_beta_other_T2"
-colnames(data_T2)[209] <- "run3hl_beta_other_T2"
-colnames(data_T2)[210] <- "run1hr_beta_own_T2"
-colnames(data_T2)[211] <- "run2hr_beta_own_T2"
-colnames(data_T2)[212] <- "run3hr_beta_own_T2"
-colnames(data_T2)[213] <- "run1hr_beta_other_T2"
-colnames(data_T2)[214] <- "run2hr_beta_other_T2"
-colnames(data_T2)[215] <- "run3hr_beta_other_T2"
+newnames <- c(
+  "subject" = 1, "site" = 3, "treatment_group" = 5, "age" = 8, "CAPSB" = 9,
+  "avo_1" = 90, "diss_1" = 91, "anx_1" = 92,
+  "avo_2" = 93, "diss_2" = 94, "anx_2" = 95,
+  "avo_3" = 96, "diss_3" = 97, "anx_3" = 98,
+  "now_own_1" = 101, "now_own_2" = 102, "now_own_3" = 103,
+  "now_own_mean" = 104, "STAR_ID" = 216,
+  "run1vv" = 217, "run2vv" = 218, "run3vv" = 219,
+  "run1al" = 220, "run2al" = 221, "run3al" = 222,
+  "run1ar" = 223, "run2ar" = 224, "run3ar" = 225,
+  "run1hl" = 226, "run2hl" = 227, "run3hl" = 228,
+  "run1hr" = 229, "run2hr" = 230, "run3hr" = 231,
+  "run1vv_T2" = 234, "run2vv_T2" = 235, "run3vv_T2" = 236,
+  "run1al_T2" = 237, "run2al_T2" = 238, "run3al_T2" = 239,
+  "run1ar_T2" = 240, "run2ar_T2" = 241, "run3ar_T2" = 242,
+  "run1hl_T2" = 243, "run2hl_T2" = 244, "run3hl_T2" = 245,
+  "run1hr_T2" = 246, "run2hr_T2" = 247, "run3hr_T2" = 248)
+names(data_T2)[newnames] <- names(newnames)
+
+names(data_T2) <- make.unique(names(data_T2))
 
 data_T2 <- data_T2 %>%
   mutate(
@@ -132,8 +57,9 @@ data_T2 <- data_T2 %>%
     # Hippocampus right
     run1hr_ch = run1hr_T2 - run1hr,
     run2hr_ch = run2hr_T2 - run2hr,
-    run3hr_ch = run3hr_T2 - run3hr
-  )
+    run3hr_ch = run3hr_T2 - run3hr)
+
+
 # does avoidance score explain variation in ROI signal?
 # wide to long including T1 and T2 change scores!
 data_long_runs_T2 <- data_T2 %>%
@@ -150,8 +76,7 @@ data_long_runs_T2 <- data_T2 %>%
             #  run1hr_T2, run2hr_T2, run3hr_T2),
     names_to = c("run", "ROI"),
     names_pattern = "run([0-9]+)([a-zA-Z]+)",
-    values_to = "value"
-  ) %>%
+    values_to = "value") %>%
   mutate(
     run = as.factor(run)
     # timepoint = ifelse(is.na(timepoint), 1, 2)
@@ -160,7 +85,7 @@ data_long_runs_T2 <- data_T2 %>%
     #   ROI %in% c("al","ar") ~ "amygdala",
     #   ROI %in% c("hl","hr") ~ "hippocampus"
     # )
-  ) %>%
+    ) %>%
   select(subject, site, CAPS.POST.PRE, caps_b_t3, age, run, ROI, value, now_own_mean, STAR_ID)
 
 
@@ -234,17 +159,17 @@ data_long_runs_T2 <- data_T2 %>%
 ---------------------------------------------------------------------------
 #######################################################################################
 
-# data_long_runs_T2 <- data_long_runs_T2 %>%
-#   mutate(run = as.numeric(run))
-# library(performance)
+data_long_runs_T2 <- data_long_runs_T2 %>%
+  mutate(run = as.numeric(run))
+
+library(performance)
 
 # Combine left/right amygdala into one dataset with hemi variable
 amygdala_data_T2 <- data_long_runs_T2 %>%
   filter(ROI %in% c("al", "ar")) %>%
   mutate(
     hemi = ifelse(ROI == "al", "L", "R"),
-    run = as.factor(run)
-  )
+    run = as.factor(run))
 
 amygdala_data_T2 <- amygdala_data_T2 %>%
   mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
@@ -324,7 +249,7 @@ hipp_data_T2 <- data_long_runs_T2 %>%
 hipp_data_T2 <- hipp_data_T2 %>%
   mutate(CAPS.POST.PRE = as.numeric(CAPS.POST.PRE))
 
-# Run the mixed model                                                                   REPORTING THIS FOR HIPPOCAMPUS
+# Run the mixed model                                                               REPORTING THIS FOR HIPPOCAMPUS
 results_hipp_T2 <- list(
   hippocampus = try(
     lmer(value ~ hemi + site + age + run * CAPS.POST.PRE + (1 | subject),
