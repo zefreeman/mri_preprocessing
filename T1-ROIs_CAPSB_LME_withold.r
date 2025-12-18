@@ -4,13 +4,9 @@
 install.packages("pacman")
 library(pacman)
 pacman::p_load(tidyr, tidyverse, dplyr, lme4, lmerTest, performance,
-               ggplot2, ggpredict, broom.mixed, purrr, emmeans)
+               ggplot2, broom.mixed, purrr, emmeans) #ggpredict
 
 # to do:
-# - add in contrast values made from betas which were extracted 
-# - re-run all baseline analyses with these numbers instead
-# - enter the nowness ratings for the missing pts by hand that Raph found
-
 # - why did some people not run in the baseline group level model?
 
 # 0. Data loading -------------------------------------------------------------
@@ -34,8 +30,7 @@ newnames <- c(
   "run1al" = 109, "run2al" = 110, "run3al" = 111,
   "run1ar" = 112, "run2ar" = 113, "run3ar" = 114,
   "run1hl" = 115, "run2hl" = 116, "run3hl" = 117,
-  "run1hr" = 118, "run2hr" = 119, "run3hr" = 120
-)
+  "run1hr" = 118, "run2hr" = 119, "run3hr" = 120)
 names(data)[newnames] <- names(newnames)
 
 trial_data <- read.csv("/Users/zefreeman/Documents/T1_nowness_ratings.csv",
@@ -48,8 +43,7 @@ roi_map <- tribble(
   "ramygdala", "ar",
   "lhippocampus", "hl",
   "rhippocampus", "hr",
-  "vmpfc", "vv"
-)
+  "vmpfc", "vv")
 roi_overlap <- roi_overlap %>%
   left_join(roi_map, by = "ROI")
 
@@ -66,8 +60,7 @@ data_long_runs <- data %>%
              run1hr, run2hr, run3hr),
     names_to = c("run", "ROI"),
     names_pattern = "run([0-9]+)([a-zA-Z]+)",
-    values_to = "roi_signal"
-  ) %>%
+    values_to = "roi_signal") %>%
   mutate(run = as.character(run)) %>%
   filter(!is.na(subject), !is.na(roi_signal)) %>%  # remove rows w missing p or val
   select(subject, site, CAPSB, age, run, ROI, roi_signal, now_own_mean, STAR_ID)
@@ -78,8 +71,7 @@ data_long_avoid <- data %>%
     cols = c(avo_1, avo_2, avo_3),
     names_to = "run",
     names_pattern = "avo_([0-9]+)",
-    values_to = "avoid_score"
-  ) %>%
+    values_to = "avoid_score") %>%
     mutate(run = as.character(run)) %>%
   select(subject, run, avoid_score)
 
@@ -94,7 +86,6 @@ data_long_avoid <- data_long_avoid %>%
 # Left join: replicate avoid_score across all ROI rows per subject/run
 data_long_runs <- data_long_runs %>%
   left_join(data_long_avoid, by = c("subject", "run"))
-
 
 # # wide to long for anxiety
 # data_long_anxiety <- data %>%
@@ -116,21 +107,19 @@ data_long_runs <- data_long_runs %>%
 ## CORRELATION OF NOWNESS WITH CAPS AND AVOIDANCE SCORES
 #########################################
 
-nowness_run_avgs <- trial_data %>%              
+nowness_run_avgs <- trial_data %>%
   filter(!is.na(Run), Run != "NA") %>%
   group_by(subject = SubjectID, run = Run) %>%
   summarise(
     mean_nowness = mean(Rating, na.rm = TRUE),
-    .groups = "drop"
-  )
+    .groups = "drop")
 avoid_caps_runs <- data_long_runs %>%
   filter(run %in% c(1,2,3)) %>%
   group_by(STAR_ID, run) %>%
   summarise(
     mean_avoid = mean(avoid_score, na.rm = TRUE),
     mean_CAPS  = mean(CAPSB, na.rm = TRUE),
-    .groups = "drop"
-  )
+    .groups = "drop")
 nowness_run_avgs <- nowness_run_avgs %>%
   mutate(run = as.numeric(run))
 
@@ -146,8 +135,7 @@ cor_by_run <- function(run_num) {
     filter(run == run_num) %>%
     select(mean_nowness, mean_avoid, mean_CAPS)
 
-  cor(df, use = "complete.obs")
-}
+  cor(df, use = "complete.obs")}
 corr_run1 <- cor_by_run(1)
 corr_run2 <- cor_by_run(2)
 corr_run3 <- cor_by_run(3)
@@ -156,41 +144,52 @@ corr_run3 <- cor_by_run(3)
 corr_long <- bind_rows(
   melt(corr_run1) %>% mutate(run = "Run 1"),
   melt(corr_run2) %>% mutate(run = "Run 2"),
-  melt(corr_run3) %>% mutate(run = "Run 3")
-)
+  melt(corr_run3) %>% mutate(run = "Run 3"))
 ggplot(corr_long, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile(color = "white") +
   geom_text(
     aes(label = sprintf("%.2f", value)),
-    size = 3
-  ) +
+    size = 3) +
   scale_fill_gradient2(
     low = "blue",
     high = "red",
     mid = "white",
     midpoint = 0,
     limits = c(-1, 1),
-    name = "Correlation"
-  ) +
+    name = "Correlation") +
   facet_wrap(~ run, nrow = 1) +
   labs(
     x = "",
-    y = ""
-  ) +
+    y = "") +
   theme_minimal(base_size = 12) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid = element_blank(),
-    strip.text = element_text(size = 12, face = "bold")
-  )
-# save as png
+    strip.text = element_text(size = 12, face = "bold"))
 ggsave("correlation_nowness_avoid_CAPS_by_run.png", width = 10, height = 4, dpi = 300)
 
 
+# predicting avoidance with caps by run interaction ------------------------------
+data_long_runs <- data_long_runs %>%
+  mutate(
+    run = factor(run, levels = c("1", "2", "3"))
+  )
 
+m_avoid <- lmer(
+  avoid_score ~ run * CAPSB + site + age + (1 | subject),
+  data = data_long_runs,
+  REML = FALSE)
+
+summary(m_avoid)
+write.csv(
+  broom.mixed::tidy(m_avoid) %>%
+    select(term, estimate, std.error, df, statistic, p.value),
+  "results_avoid_predicted_by_CAPSbyrun.csv",
+  row.names = FALSE
+)
 # mixed effects w random slope for run --------------------------- FIRST MODEL A
 
-data_long_runs <- data_long_runs %>% # nolint
+data_long_runs <- data_long_runs %>% 
   mutate(run = as.numeric(run))
 
 get_vif_lmer <- function(model) {
@@ -204,39 +203,39 @@ amygdala_data <- data_long_runs %>%
     hemi = ifelse(ROI == "al", "L", "R"),
     run = as.factor(run))
 
-# Run the mixed model                       REPORTING THIS FOR AMYGDALA
-results_amygdala <- amygdala_data %>%
-  #mutate(run = as.numeric(run)) %>%
-  group_split(ROI_group = "amygdala") %>%  # just for structure, single group
-  map(function(df)
-  m1 <- 
-  lmer(roi_signal ~ hemi + site + age + run * CAPSB + (1 | subject),
-  data = df, REML = FALSE),
-  silent = TRUE) %>%
-  set_names("amygdala")
-map(results_amygdala, summary)
-results_table <- map_dfr(results_amygdala, function(model) {
+results_m1_amyg <- list(
+  amygdala = lmer(
+    roi_signal ~ hemi + site + age + run * CAPSB + (1 | subject),
+    data = amygdala_data,
+    REML = FALSE))
+map(results_m1_amyg, summary)
+
+results_m1_amyg_table <- map_dfr(results_m1_amyg, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
-write.csv(results_table, "results_m1_amyg.csv", row.names = FALSE)
+write.csv(results_m1_amyg_table, "results_m1_amyg.csv", row.names = FALSE)
 
-m1_amygdala <- results_amygdala$amygdala
+plot_data <- augment(results_m1_amyg$amygdala) %>%
+  mutate(
+    run  = factor(run),
+    site = factor(site))
 
-# Compute estimated marginal means (predicted means per run × site) to then plot
-emm_amygdala <- emmeans(m1_amygdala, ~ site * run)
-aplot_data <- as.data.frame(emm_amygdala)
-a_plot <- ggplot(aplot_data, aes(x = run, y = emmean, fill = site)) +
-  geom_bar(stat = "identity", 
-  position = position_dodge(width = 0.8), width = 0.7) +
+a_plot <- ggplot(plot_data, aes(x = run, y = .fitted, fill = site)) +
+  geom_bar(
+    stat = "summary",
+    fun = mean,
+    position = position_dodge(width = 0.8),
+    width = 0.7) +
   geom_errorbar(
-    aes(ymin = emmean - SE, ymax = emmean + SE),
-    width = 0.2,
-    position = position_dodge(width = 0.8)) +
-  coord_cartesian(ylim = c(-0.75, 1.5)) +  # <-- y-axis limits
-  theme_minimal(base_size = 12) +
+    stat = "summary",
+    fun.data = mean_se,
+    position = position_dodge(width = 0.8),
+    width = 0.2) +
+  coord_cartesian(ylim = c(-0.25, 0.5)) +
   theme(plot.title = element_text(hjust = 0.5)) +
+  theme_minimal(base_size = 12) +
   labs(
     title = "Amygdala: Predicted ROI Signal by Run and Site",
     x = "Run",
@@ -247,17 +246,18 @@ a_plot <- ggplot(aplot_data, aes(x = run, y = emmean, fill = site)) +
     panel.grid.major.x = element_blank())
 ggsave("amyg_run*site.png", a_plot, width = 6, height = 4, dpi = 300)
 
-# Plot the run effects collapsing by site with one error bar per bar
-emm_amygdala <- emmeans(m1_amygdala, ~ run)
-aplot_data <- as.data.frame(emm_amygdala)
-a2_plot <- ggplot(aplot_data, aes(x = run, y = emmean)) +
-  geom_bar(stat = "identity", 
-           position = position_dodge(width = 0.8), 
-           width = 0.7, fill = "skyblue") +
+# plot the run effects collapsing by site ---------------------------------
+a2_plot <- ggplot(plot_data, aes(x = run, y = .fitted)) +
+  geom_bar(
+    stat = "summary",
+    fun = mean,
+    width = 0.7,
+    fill = "skyblue") +
   geom_errorbar(
-    aes(ymin = emmean - SE, ymax = emmean + SE),
+    stat = "summary",
+    fun.data = mean_se,
     width = 0.2) +
-  coord_cartesian(ylim = c(-0.1, 0.3)) +  # <-- y-axis limits
+  coord_cartesian(ylim = c(0, 0.3)) +
   theme_minimal(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5)) +
   labs(
@@ -269,6 +269,8 @@ a2_plot <- ggplot(aplot_data, aes(x = run, y = emmean)) +
     panel.grid.major.x = element_blank())
 ggsave("amyg_run.png", a2_plot, width = 6, height = 4, dpi = 300)
 
+
+
 # scatter plot of fitted roi by CAPS Z scored -------------------------------
 mf <- model.frame(m1_amygdala)
 mf <- mf %>%
@@ -276,7 +278,6 @@ mf <- mf %>%
     CAPSB_z = as.numeric(scale(CAPSB)),
     fitted_roi = fitted(m1_amygdala),
     run = factor(run))
-
 ggplot(mf, aes(x = CAPSB_z, y = fitted_roi, colour = run)) +
   geom_point(alpha = 0.6, size = 2) +
   geom_smooth(
@@ -300,39 +301,39 @@ hipp_data <- data_long_runs %>%
     hemi = ifelse(ROI == "hl", "L", "R"),
     run = as.factor(run))
 
-results_hipp <- hipp_data %>%
-  #mutate(run = as.numeric(run)) %>%
-  group_split(ROI_group = "hippocampus") %>%
-  map(function(df) {
-    m1 <- try(
-      lmer(roi_signal ~ hemi + site + age + run * CAPSB + (1 | subject),
-           data = df, REML = FALSE),
-      silent = TRUE)
-  }) %>%
-  set_names("hippocampus")
-map(results_hipp, summary)
+results_m1_hipp <- list(
+  hippocampus = lmer(
+    roi_signal ~ hemi + site + age + run * CAPSB + (1 | subject),
+    data = hipp_data,
+    REML = FALSE))
+map(results_m1_hipp, summary)
 
-results_table <- map_dfr(results_hipp, function(model) {
-  if (is.null(model)) return(NULL)  # skip failed models
+results_m1_hipp_table <- map_dfr(results_m1_hipp, function(model) {
+  if (is.null(model)) return(NULL)  
   tidy(model) %>%
     select(term, estimate, std.error, df, statistic, p.value)
-}, .id = "ROI") 
-write.csv(results_table, "results_m1_hipp.csv", row.names = FALSE)
+}, .id = "ROI")
+write.csv(results_m1_hipp_table, "results_m1_hipp.csv", row.names = FALSE)
 
-m1_hipp <- results_hipp$hippocampus
+plot_data <- augment(results_m1_hipp$hippocampus) %>%
+  mutate(
+    run  = factor(run),
+    site = factor(site))
 
-emm_hipp <- emmeans(m1_hipp, ~ site * run)
-hplot_data <- as.data.frame(emm_hipp)
-h_plot <- ggplot(hplot_data, aes(x = run, y = emmean, fill = site)) +
-  geom_bar(stat = "identity", 
-  position = position_dodge(width = 0.8), width = 0.7) +
+h_plot <- ggplot(plot_data, aes(x = run, y = .fitted, fill = site)) +
+  geom_bar(
+    stat = "summary",
+    fun = mean,
+    position = position_dodge(width = 0.8),
+    width = 0.7) +
   geom_errorbar(
-    aes(ymin = emmean - SE, ymax = emmean + SE),
-    width = 0.2,
-    position = position_dodge(width = 0.8)) +
-  coord_cartesian(ylim = c(-0.5, 1)) +  
-  theme_minimal(base_size = 12) +
+    stat = "summary",
+    fun.data = mean_se,
+    position = position_dodge(width = 0.8),
+    width = 0.2) +
+  coord_cartesian(ylim = c(-0.25, 0.5)) +
   theme(plot.title = element_text(hjust = 0.5)) +
+  theme_minimal(base_size = 12) +
   labs(
     title = "Hippocampus: Predicted ROI Signal by Run and Site",
     x = "Run",
@@ -343,17 +344,18 @@ h_plot <- ggplot(hplot_data, aes(x = run, y = emmean, fill = site)) +
     panel.grid.major.x = element_blank())
 ggsave("hipp_run*site.png", h_plot, width = 6, height = 4, dpi = 300)
 
-# Plot the run effects collapsing by site with one error bar per bar
-emm_hipp <- emmeans(m1_hipp, ~ run)
-hplot_data <- as.data.frame(emm_hipp)
-h2_plot <- ggplot(hplot_data, aes(x = run, y = emmean)) +
-  geom_bar(stat = "identity", 
-           position = position_dodge(width = 0.8), 
-           width = 0.7, fill = "skyblue") +
+# plot the run effects collapsing by site ---------------------------------
+h2_plot <- ggplot(plot_data, aes(x = run, y = .fitted)) +
+  geom_bar(
+    stat = "summary",
+    fun = mean,
+    width = 0.7,
+    fill = "skyblue") +
   geom_errorbar(
-    aes(ymin = emmean - SE, ymax = emmean + SE),
+    stat = "summary",
+    fun.data = mean_se,
     width = 0.2) +
-  coord_cartesian(ylim = c(0, 0.4)) +  # <-- y-axis limits
+  coord_cartesian(ylim = c(0, 0.3)) +
   theme_minimal(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5)) +
   labs(
@@ -393,60 +395,65 @@ ggsave("hipp_roifitted_byCAPS_run.png", width = 8, height = 6, dpi = 300)
 vmpfc_data <- data_long_runs %>%
   filter(ROI == "vv") %>%
   mutate(run = as.factor(run))
-results_m1 <- lmer(
+results_m1_vmpfc <- lmer(
   roi_signal ~ site + age + run * CAPSB + (1 | subject),
   data = vmpfc_data,
   REML = FALSE)
-summary(results_m1)
+summary(results_m1_vmpfc)
 
-results_table_vmpfc <- broom.mixed::tidy(results_m2) %>%
+results_table_vmpfc <- broom.mixed::tidy(results_m1_vmpfc) %>%
   select(term, estimate, std.error, df, statistic, p.value) %>%
-  mutate(ROI = "vv")  
+  mutate(ROI = "vv")
 write.csv(results_table_vmpfc, "results_m1_vv.csv", row.names = FALSE)
 
 vif_results <- results_m1 %>%
   compact() %>%  # remove NULLs if any
   map(get_vif_lmer)
 
-# compute predicted marginal means for run × site
-vv_emm <- emmeans(results_m1, ~ site * run)
-vv_plot_data <- as.data.frame(vv_emm)
 
-# plot (same style as hippocampus/amygdala)
-vv_plot <- ggplot(vv_plot_data, aes(x = run, y = emmean, fill = site)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+# plot the fitted values ------------------------------------------------
+
+plot_data <- augment(results_m1_vmpfc) %>%
+  mutate(
+    run  = factor(run),
+    site = factor(site))
+
+vv_plot <- ggplot(plot_data, aes(x = run, y = .fitted, fill = site)) +
+  geom_bar(
+    stat = "summary",
+    fun = mean,
+    position = position_dodge(width = 0.8),
+    width = 0.7) +
   geom_errorbar(
-    aes(ymin = emmean - SE, ymax = emmean + SE),
-    width = 0.2,
-    position = position_dodge(width = 0.8)
-  ) +
-  coord_cartesian(ylim = c(-0.75, 0.5)) +  # y-axis range
+    stat = "summary",
+    fun.data = mean_se,
+    position = position_dodge(width = 0.8),
+    width = 0.2) +
+  coord_cartesian(ylim = c(-0.25, 0.75)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   theme_minimal(base_size = 12) +
   labs(
     title = "vmPFC: Predicted ROI Signal by Run and Site",
     x = "Run",
     y = "Fitted Value (± SEM)",
-    fill = "Site"
-  ) +
+    fill = "Site") +
   theme(
     legend.position = "top",
-    panel.grid.major.x = element_blank()
-  )
+    panel.grid.major.x = element_blank())
 ggsave("vmpfc_run*site.png", vv_plot, width = 6, height = 4, dpi = 300)
 
-# Plot the run effects collapsing by site with one error bar per bar
-emm_vv <- emmeans(results_m1, ~ run)
-vvplot_data <- as.data.frame(emm_vv)
-
-vv2_plot <- ggplot(vvplot_data, aes(x = run, y = emmean)) +
-  geom_bar(stat = "identity", 
-           position = position_dodge(width = 0.8), 
-           width = 0.7, fill = "skyblue") +
+# plot the run effects collapsing by site ---------------------------------
+vv2_plot <- ggplot(plot_data, aes(x = run, y = .fitted)) +
+  geom_bar(
+    stat = "summary",
+    fun = mean,
+    width = 0.7,
+    fill = "skyblue") +
   geom_errorbar(
-    aes(ymin = emmean - SE, ymax = emmean + SE),
+    stat = "summary",
+    fun.data = mean_se,
     width = 0.2) +
-  coord_cartesian(ylim = c(0, 0.6)) +  # <-- y-axis limits
+  coord_cartesian(ylim = c(0, 0.6)) +
   theme_minimal(base_size = 10) +
   theme(plot.title = element_text(hjust = 0.5)) +
   labs(
@@ -458,8 +465,9 @@ vv2_plot <- ggplot(vvplot_data, aes(x = run, y = emmean)) +
     panel.grid.major.x = element_blank())
 ggsave("vmpfc_run.png", vv2_plot, width = 6, height = 4, dpi = 300)
 
+
 # scatter plot of fitted roi by CAPS Z scored -------------------------------
-mf <- model.frame(results_m1)
+mf <- model.frame(results_m1_vmpfc)
 mf <- mf %>%
   mutate(
     CAPSB_z = as.numeric(scale(CAPSB)),
@@ -503,12 +511,17 @@ vif_results3 <- results_m3 %>%
 vif_results3
 
 #----------------------------------------------------------------------------
-
-results_m2 <- lmer(
+results_m2_vmpfc <- lmer(
   roi_signal ~ avoid_score * run + CAPSB + site + age + (1 | subject),
   data = vmpfc_data,
   REML = FALSE)
-summary(results_m2)
+summary(results_m2_vmpfc)
+m2_vmpfc <- results_m2_vmpfc
+
+results_m2_vmpfc <- broom.mixed::tidy(results_m2_vmpfc) %>%
+  select(term, estimate, std.error, df, statistic, p.value) %>%
+  mutate(ROI = "vv")
+write.csv(results_m2_vmpfc, "results_vmpfc_avoidbyrun.csv", row.names = FALSE)
 
 # results_m3.5 <- data_long_runs %>%
 #   mutate(run = as.factor(run)) %>%
@@ -524,7 +537,6 @@ summary(results_m2)
 # vif_results3.5 <- results_m3.5 %>%
 #   compact() %>%  # remove NULLs if any
 #   map(get_vif_lmer)
-
 # results_table <- map_dfr(results_m3.5, function(model) {
 #   if (is.null(model)) return(NULL)  # skip failed models
 #   tidy(model) %>% 
@@ -533,16 +545,15 @@ summary(results_m2)
 # # just the vmpfc vv column
 # resultsm3.5vv_table <- tidy(results_m3.5$vv) %>%
 #   select(term, estimate, std.error, df, statistic, p.value)
-
-write.csv(resultsm3.5vv_table, "results_vmpfc_avoidbyrun.csv", row.names = FALSE)
+# write.csv(resultsm3.5vv_table, "results_vmpfc_avoidbyrun.csv", row.names = FALSE)
 
 
 # scatter plot of fitted roi by CAPS Z scored -------------------------------
-mf <- model.frame(results_m2)
+mf <- model.frame(m2_vmpfc)
 mf <- mf %>%
   mutate(
     avoid_score = as.numeric(scale(avoid_score)),
-    fitted_roi = fitted(results_m2),
+    fitted_roi = fitted(m2_vmpfc),
     run = factor(run))
 
 ggplot(mf, aes(x = avoid_score, y = fitted_roi, colour = run)) +
@@ -562,35 +573,34 @@ ggsave("vmpfc_roifitted_byAvoid_run.png", width = 8, height = 6, dpi = 300)
 
 
 
-results_hipp <- hipp_data %>%
+results_m2_hipp <- hipp_data %>%
   #mutate(run = as.numeric(run)) %>%
   group_split(ROI_group = "hippocampus") %>%  # just for structure, single group
   map(function(df) {
-    m1 <- try(
+    m2 <- try(
       lmer(roi_signal ~ avoid_score * run + CAPSB + site + age + hemi + (1 | subject),
            data = df, REML = FALSE),
       silent = TRUE
     )
-    return(m1)
+    return(m2)
   }) %>%
   set_names("hippocampus")
-map(results_hipp, summary)
+map(results_m2_hipp, summary)
+m2_hipp <- results_m2_hipp$hippocampus
 
-m1_hipp <- results_hipp$hippocampus
-
-results_hipp <- map_dfr(results_hipp, function(model) {
+results_m2_hipp <- map_dfr(results_m2_hipp, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
-}, .id = "ROI")  # add ROI as a column
-write.csv(results_hipp, "results_hipp_avoidbyrun.csv", row.names = FALSE)
+}, .id = "ROI")
+write.csv(results_m2_hipp, "results_hipp_avoidbyrun.csv", row.names = FALSE)
 
 # scatter plot of fitted roi by CAPS Z scored -------------------------------
-mf <- model.frame(m1_hipp)
+mf <- model.frame(m2_hipp)
 mf <- mf %>%
   mutate(
     avoid_score = as.numeric(scale(avoid_score)),
-    fitted_roi = fitted(m1_hipp),
+    fitted_roi = fitted(m2_hipp),
     run = factor(run))
 
 ggplot(mf, aes(x = avoid_score, y = fitted_roi, colour = run)) +
@@ -609,28 +619,29 @@ ggsave("hipp_roifitted_byAvoid_run.png", width = 8, height = 6, dpi = 300)
 
 
 
-results_amygdala <- amygdala_data %>%
+results_m2_amygdala <- amygdala_data %>%
   #mutate(run = as.numeric(run)) %>%
   group_split(ROI_group = "amygdala") %>%  # just for structure, single group
   map(function(df) {
     m1 <- try(
-      lmer(roi_signal ~ avoid_score * run + CAPSB + site + age + hemi + (1 | subject), # originally run * caps
+      lmer(roi_signal ~ avoid_score * run + CAPSB + site + age + hemi + (1 | subject), 
+      # originally run * caps
            data = df, REML = FALSE),
       silent = TRUE
     )
     return(m1)
   }) %>%
   set_names("amygdala")
-map(results_amygdala, summary)
+map(results_m2_amygdala, summary)
 
-m2_amyg <- results_amygdala$amygdala
+m2_amyg <- results_m2_amygdala$amygdala
 
-results_table <- map_dfr(results_amygdala, function(model) {
+results_m2_amygdala <- map_dfr(results_m2_amygdala, function(model) {
   if (is.null(model)) return(NULL)  # skip failed models
   tidy(model) %>% 
     select(term, estimate, std.error, df, statistic, p.value)
 }, .id = "ROI")  # add ROI as a column
-write.csv(results_table, "results_amyg_avoidbyrun.csv", row.names = FALSE)
+write.csv(results_m2_amygdala, "results_amyg_avoidbyrun.csv", row.names = FALSE)
 
 # scatter plot of fitted roi by CAPS Z scored -------------------------------
 mf <- model.frame(m2_amyg)
@@ -727,8 +738,9 @@ write.csv(formatted_table, "results_avoidbyrun_table_formatted.csv",
   row.names = FALSE)
 
 
+#### GOT TO HERE 10:30PM TUESDAY 16TH DECEMBER ### ------------------------------------------------------------------------------
 
-# trial by trial nowness ------------------------------------------------------------------------------           REPORTING TRIAL BY TRIAL NOWNESS
+# trial by trial nowness -----------------------------------------
 # descriptives
 
 # Filter to only own ("Yes") trials
