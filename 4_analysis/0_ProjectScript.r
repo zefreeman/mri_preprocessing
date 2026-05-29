@@ -2,7 +2,7 @@
 #                                                                                #
 #                    Baseline STAR participants fMRI analysis                    #
 #                                                                                #
-#                         Ze Freeman, freemanzcl@gmail.com                       #
+#                         Ze Freeman                                             #
 #                                                                                #
 #                          Last updated: 17 Jan 2024                             #
 #                                                                                #
