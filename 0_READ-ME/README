@@ -1,4 +1,5 @@
 This series of scripts takes the data outputted directly from the scanner and reshapes into a format appropriate for BIDS conversion. 
+I wrote these scripts for my PhD research at the Institute of Psychiatry, Psychology, and Neuroscience at King's College London.
 
 Data checking must happen first, following these rules:
 	a) Make sure nothing's missing from the full expected dataset 
